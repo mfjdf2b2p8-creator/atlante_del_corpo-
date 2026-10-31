@@ -1,0 +1,106 @@
+/* Stili dell'atlante anatomico SVG */
+.body-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.body-svg .floor { fill: var(--gGlass); opacity: .5; }
+.body-svg .sil path { fill: var(--gGlass); stroke: rgba(130, 200, 255, .38); stroke-width: 1.1; }
+.body-svg .sil { filter: var(--fRim); }
+.body-svg .sil-light { display: none; }
+.body-svg .L { display: none; }
+
+/* strato attivo */
+.body-svg[data-layer="muscoli"] .L-muscoli,
+.body-svg[data-layer="ossa"] .L-ossa,
+.body-svg[data-layer="tendini"] .L-tendini,
+.body-svg[data-layer="tendini"] .L-ghost,
+.body-svg[data-layer="nervi"] .L-nervi,
+.body-svg[data-layer="nervi"] .L-ghost,
+.body-svg[data-layer="linfatico"] .L-linfatico,
+.body-svg[data-layer="linfatico"] .L-ghost { display: inline; }
+.body-svg[data-layer="muscoli"] .sil path { fill: #3a1519; stroke: rgba(255, 140, 120, .25); }
+.body-svg[data-layer="muscoli"] .sil { filter: none; }
+.body-svg[data-layer="muscoli"] .sil .p-head,
+.body-svg[data-layer="muscoli"] .sil .p-ear { fill: #8a3a38; stroke: #5a141b; }
+.body-svg[data-layer="muscoli"] .sil .p-hand,
+.body-svg[data-layer="muscoli"] .sil .p-thumb,
+.body-svg[data-layer="muscoli"] .sil .p-foot { fill: #b9655a; stroke: #5a141b; }
+.body-svg[data-layer="muscoli"] .sil .p-breast { fill: #3a1519; stroke: none; }
+
+/* muscoli */
+.mf { fill: var(--gMus); }
+.me { fill: none; stroke: #5a141b; stroke-width: .7; stroke-opacity: .85; }
+.fib { fill: none; stroke: #ffc2b0; stroke-width: .45; stroke-opacity: .32; }
+.dc .mf { fill: #9a3a37; }
+.dc .fib { stroke-opacity: .18; }
+.st.deep { opacity: 0; pointer-events: none; }
+.tpassive { fill: var(--gTend); opacity: .62; pointer-events: none; }
+.tpassive.tp-fasciaTL { opacity: .3; }
+.tpassive.tp-itb, .tpassive.tp-itbB { opacity: .38; }
+.tpassive.tp-intersezioni, .tpassive.tp-lineaAlba { opacity: .45; }
+.tpassive.tb { fill: var(--gBone); }
+.breast { fill: rgba(255, 214, 196, .13); stroke: rgba(255, 220, 205, .45); stroke-width: .8; stroke-dasharray: 3 2.5; pointer-events: none; }
+
+/* ghost (contesto muscolare sotto altri strati) */
+.L-ghost path { fill: #7a8fb0; opacity: .08; }
+.body-svg[data-layer="tendini"] .L-ghost path { fill: #c2453b; opacity: .22; }
+
+/* tendini */
+.tf { fill: var(--gTend); stroke: #6f8099; stroke-width: .5; }
+.tb { fill: var(--gBone); stroke: #8a7a5c; stroke-width: .5; }
+.L-tendini .dc .tf { opacity: .7; }
+
+/* ossa */
+.bf { fill: var(--gBone); stroke: #7d6d52; stroke-width: .6; }
+.bp { fill: #efe3c9; stroke: #7d6d52; stroke-width: .5; }
+.bd { fill: #7fb4d8; opacity: .85; }
+.bs { fill: none; stroke: #e9dcc0; stroke-linecap: round; }
+.bsc { fill: none; stroke: #b9c6cf; stroke-linecap: round; opacity: .7; }
+.bsd { fill: none; stroke: #5b4c35; stroke-linecap: round; }
+.dk { fill: #0b1220; opacity: .8; }
+.jt { fill: var(--gJoint); opacity: 0; }
+
+/* nervi */
+.nv { fill: none; stroke: #f5c542; stroke-linecap: round; stroke-linejoin: round; filter: var(--fGlow); }
+.nvc { fill: none; stroke: #fff6c8; stroke-linecap: round; opacity: .8; }
+.dc .nv { opacity: .45; }
+.organN { fill: rgba(245, 197, 66, .1); stroke: rgba(245, 197, 66, .45); stroke-width: .8; }
+.nn { fill: var(--gNerveNode); }
+
+/* linfatico */
+.lv { fill: none; stroke: #4fe0a0; stroke-linecap: round; opacity: .85; filter: var(--fGlow); }
+.lnode { fill: var(--gNode); filter: var(--fGlow); }
+.lorg { fill: rgba(70, 217, 150, .25); stroke: #46d996; stroke-width: 1; }
+
+/* interazione */
+.st { cursor: pointer; transition: opacity .35s, filter .35s; }
+.st:hover .mf { fill: var(--gMusSel); }
+.st:hover .tf, .st:hover .bf, .st:hover .tb { filter: brightness(1.25); }
+.st:hover .nv { stroke: #fff2a8; }
+.st:hover .lv { stroke: #b8ffd9; }
+
+/* modalità focus: tutto attenuato tranne la selezione */
+.body-svg.focus .L .st:not(.sel), .body-svg.focus .L .dc, .body-svg.focus .tpassive { opacity: .18; }
+.body-svg.focus .L .st.sel { opacity: 1; filter: var(--fGlowBig); animation: pulse 1.8s ease-in-out infinite; }
+.body-svg.focus .st.sel .mf { fill: var(--gMusSel); }
+.body-svg.focus .st.sel .tf, .body-svg.focus .st.sel .bf, .body-svg.focus .st.sel .tb { fill: #ffd29a; stroke: #ff7a2b; }
+.body-svg.focus .st.sel .bd { fill: #ff8a3c; }
+.body-svg.focus .st.sel .bs { stroke: #ffd29a; }
+.body-svg.focus .st.sel .nv { stroke: #ffef8a; stroke-width: 3.2; }
+.body-svg.focus .st.sel .lv { stroke: #b8ffd9; }
+.body-svg.focus .st.sel.jt { opacity: 1; }
+.body-svg.focus .st.peel { opacity: .06 !important; }
+.body-svg .st.deep.sel { opacity: 1; }
+@keyframes pulse { 50% { filter: var(--fGlow); } }
+
+/* punti caldi */
+.hot { cursor: pointer; outline: none; }
+.hot:focus-visible .hc { fill: #58d0ff; }
+.hot .hc { fill: #fff; }
+.hot .hr { fill: none; stroke: #fff; stroke-width: 1.2; transform-box: fill-box; transform-origin: center; animation: ring 2.2s ease-out infinite; }
+.hot .hh { fill: transparent; }
+.hot:hover .hc { fill: #ffb35c; }
+.hot.on .hc { fill: #ff7a2b; }
+@keyframes ring { from { transform: scale(.6); opacity: .9; } to { transform: scale(2.4); opacity: 0; } }
+.body-svg.focus .hot:not(.on) { display: none; }
+.body-svg.focus .hot.on .hr { stroke: #ff7a2b; }
+.body-svg.focus .hot { pointer-events: none; }
+.pin .pc { fill: #ff7a2b; stroke: #fff; stroke-width: 1.2; }
+.pin .pr { fill: none; stroke: #ff7a2b; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: ring 1.6s ease-out infinite; }

@@ -1,0 +1,25 @@
+/* Manichino degli esercizi */
+.mq-svg { width: 100%; height: 100%; display: block; }
+.mq-svg .seg { stroke: rgba(10, 20, 35, .55); stroke-width: .5; stroke-linejoin: round; }
+.mq-svg .seg.near { fill: var(--mgNear); }
+.mq-svg .seg.far { fill: var(--mgFar); }
+.mq-svg .seg.torso, .mq-svg .seg.head { fill: var(--mgTorso); }
+.mq-svg .eye { fill: #1a2638; }
+.mq-svg .hair { fill: #3a4558; stroke: rgba(10, 20, 35, .55); stroke-width: .5; }
+.mq-svg .hl { fill: #ff6b3d; filter: var(--mgGlow); mix-blend-mode: screen; }
+.mq-svg .hln { fill: none; stroke: #ffd23f; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; filter: var(--mgGlow); }
+.mq-svg .pr-floor { fill: rgba(120, 160, 210, .05); }
+.mq-svg .pr-floorline { stroke: rgba(160, 200, 255, .35); stroke-width: .6; }
+.mq-svg .pr-mat { fill: #2d5e74; opacity: .8; }
+.mq-svg .pr-box { fill: #2a3546; stroke: #4c5d77; stroke-width: .6; }
+.mq-svg .pr-edge { fill: #ffb35c; opacity: .7; }
+.mq-svg .pr-leg { fill: #3a4a63; }
+.mq-svg .pr-wall { fill: #253041; stroke: #3d4c63; stroke-width: .6; }
+.mq-svg .pr-wallbg { fill: rgba(160, 190, 230, .06); stroke: rgba(160, 190, 230, .15); stroke-width: .6; }
+.mq-svg .pr-ball { fill: #8bd450; stroke: #4f8a26; stroke-width: .5; }
+.mq-svg .pr-band { stroke: #ff9f43; stroke-width: 1.1; stroke-linecap: round; }
+.mq-svg .pr-anchor { fill: #ff9f43; }
+.mq-svg .pr-strap { stroke: #e8d7b5; stroke-width: 1.4; stroke-linecap: round; }
+.mq-svg .pr-dbbar { stroke: #9aa7b8; stroke-width: 1.4; stroke-linecap: round; }
+.mq-svg .pr-db { fill: #556377; stroke: #2b3442; stroke-width: .4; }
+.mq-svg .mq-shadow { opacity: .7; fill: var(--mgShadow); }

@@ -71,7 +71,7 @@
   function startApp() {
     store.set("profilo", { sex: state.sex, age: state.age, height: state.height });
     setupEl.hidden = true; appEl.hidden = false;
-    renderProfile(); buildLayerNav(); renderBody();
+    renderProfile(); buildLayerNav(); renderBody(); showHint();
     const h = new URLSearchParams(location.hash.slice(1));
     if (h.get("punto") && BY[h.get("punto")]) setTimeout(() => focusPoint(h.get("punto"), h.get("lato") || "r"), 250);
   }
@@ -90,7 +90,7 @@
   /* =================== 2. CORPO =================== */
   let svg = null;
   function buildLayerNav() {
-    $("#layers").innerHTML = Object.entries(LAY).map(([k, l]) => `<button class="layer-btn${k === state.layer ? " on" : ""}" data-layer="${k}" style="--c:${l.color}"><i></i><span>${l.label}</span></button>`).join("");
+    $("#layers").innerHTML = Object.entries(LAY).map(([k, l]) => `<button class="layer-btn${k === state.layer ? " on" : ""}" data-layer="${k}" style="--c:${l.color}" aria-label="${esc(l.label)}"><i></i><span class="l-long">${l.label}</span><span class="l-short">${l.short || l.label}</span></button>`).join("");
     $$("#layers .layer-btn").forEach((b) => b.addEventListener("click", () => setLayer(b.dataset.layer)));
   }
   function setLayer(layer, keepFocus) {
@@ -109,7 +109,22 @@
     renderHots(); renderLegend(); highlight();
     $$(".seg-toggle button").forEach((b) => b.classList.toggle("on", b.dataset.view === state.view));
   }
-  function setVB(vb) { state.vb = vb; if (svg) svg.setAttribute("viewBox", vb.map((n) => n.toFixed(2)).join(" ")); }
+  function setVB(vb) {
+    state.vb = vb;
+    if (!svg) return;
+    svg.setAttribute("viewBox", vb.map((n) => n.toFixed(2)).join(" "));
+    scaleHots();
+    $("#stage").classList.toggle("zoomed", !state.focus && vb[2] < BASE_VB[2] * .97);
+  }
+  // Con lo zoom manuale i punti luminosi restano piccoli invece di ingrandirsi
+  function scaleHots() {
+    if (!svg || state.focus) return;
+    const k = Math.max(.3, Math.min(1, state.vb[2] / BASE_VB[2]));
+    $$(".hot", svg).forEach((h) => {
+      const t = h.getAttribute("transform").replace(/ scale\([^)]*\)/, "");
+      h.setAttribute("transform", k < .99 ? `${t} scale(${k.toFixed(3)})` : t);
+    });
+  }
 
   function setView(view, then) {
     if (view === state.view) { then && then(); return; }
@@ -144,7 +159,7 @@
       const [x, y] = posOf(p, side);
       return `<g class="hot" data-id="${p.id}" data-side="${side}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})" tabindex="0" role="button" aria-label="${esc(p.name)}"><circle class="hh" r="11"/><circle class="hr" r="5"/><circle class="hc" r="3.4"/></g>`;
     }).join("")).join("") + `<g class="pins"></g>`;
-    highlight();
+    highlight(); scaleHots();
   }
 
   function renderLegend() {
@@ -182,6 +197,7 @@
   $("#bodyHolder").addEventListener("mouseleave", () => tip.classList.remove("on"));
   $("#bodyHolder").addEventListener("click", (e) => {
     if (!svg) return;
+    if (gestMoved) { gestMoved = false; return; } // era un trascinamento o uno zoom, non un tocco
     tip.classList.remove("on");
     const hot = e.target.closest(".hot");
     if (hot) { focusPoint(hot.dataset.id, hot.dataset.side); return; }
@@ -205,6 +221,93 @@
     const hot = e.target.closest && e.target.closest(".hot");
     if (hot && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); focusPoint(hot.dataset.id, hot.dataset.side); }
   });
+
+  /* ---- zoom manuale: rotella, due dita, trascinamento, pulsanti ---- */
+  const MIN_W = 70;
+  const ptrs = new Map();
+  let gest = null, gestMoved = false;
+  const zoomLevel = (vb) => Math.max(vb[2] / BASE_VB[2], vb[3] / BASE_VB[3]);
+  function clampPan(vb) {
+    const [x, y, w, h] = vb;
+    const cx = Math.min(400, Math.max(0, x + w / 2));
+    const cy = Math.min(BASE_VB[1] + BASE_VB[3], Math.max(BASE_VB[1], y + h / 2));
+    return [cx - w / 2, cy - h / 2, w, h];
+  }
+  // ingrandisce (f < 1) o rimpicciolisce (f > 1) attorno al punto px,py del disegno
+  function zoomAt(px, py, f) {
+    const [x, y, w, h] = state.vb;
+    const z = zoomLevel(state.vb);
+    if (z * f >= .995) { if (!state.focus) { setVB(BASE_VB.slice()); return; } f = 1 / z; }
+    if (w * f < MIN_W) f = MIN_W / w;
+    setVB(clampPan([px - (px - x) * f, py - (py - y) * f, w * f, h * f]));
+  }
+  function zoomCenter(f) {
+    cancelAnimationFrame(zoomRaf); hideHint();
+    const [x, y, w, h] = state.vb, from = state.vb.slice(), t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / 260);
+      setVB(from); zoomAt(x + w / 2, y + h / 2, Math.pow(f, ease(t)));
+      if (t < 1) zoomRaf = requestAnimationFrame(step);
+    };
+    zoomRaf = requestAnimationFrame(step);
+  }
+  const holder = $("#bodyHolder");
+  holder.addEventListener("pointerdown", (e) => {
+    if (!svg || e.button > 0) return;
+    hideHint();
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 1) { gestMoved = false; gest = { x: e.clientX, y: e.clientY, vb: state.vb.slice() }; }
+    else if (ptrs.size === 2) {
+      const [a, b] = [...ptrs.values()];
+      gest = { d: Math.hypot(a.x - b.x, a.y - b.y), vb: state.vb.slice(), mid: svgPoint({ clientX: (a.x + b.x) / 2, clientY: (a.y + b.y) / 2 }) };
+      gestMoved = true;
+    }
+  });
+  holder.addEventListener("pointermove", (e) => {
+    if (!gest || !ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size >= 2 && gest.d) {
+      const [a, b] = [...ptrs.values()];
+      cancelAnimationFrame(zoomRaf);
+      setVB(gest.vb.slice());
+      zoomAt(gest.mid.x, gest.mid.y, gest.d / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)));
+    } else if (ptrs.size === 1 && gest.x != null) {
+      const dx = e.clientX - gest.x, dy = e.clientY - gest.y;
+      if (!gestMoved && Math.hypot(dx, dy) < 8) return;
+      if (!state.focus && zoomLevel(gest.vb) > .97) return; // corpo intero: niente da spostare
+      gestMoved = true;
+      const s = svg.getScreenCTM().a || 1;
+      cancelAnimationFrame(zoomRaf);
+      setVB(clampPan([gest.vb[0] - dx / s, gest.vb[1] - dy / s, gest.vb[2], gest.vb[3]]));
+    }
+  });
+  const endPtr = (e) => {
+    ptrs.delete(e.pointerId);
+    if (!ptrs.size) gest = null;
+    else if (ptrs.size === 1) { const [p] = [...ptrs.values()]; gest = { x: p.x, y: p.y, vb: state.vb.slice() }; }
+  };
+  holder.addEventListener("pointerup", endPtr);
+  holder.addEventListener("pointercancel", endPtr);
+  holder.addEventListener("wheel", (e) => {
+    if (!svg) return;
+    e.preventDefault(); hideHint();
+    const p = svgPoint(e);
+    cancelAnimationFrame(zoomRaf);
+    zoomAt(p.x, p.y, Math.exp(Math.max(-60, Math.min(60, e.deltaY * (e.deltaMode ? 16 : 1))) * .004));
+  }, { passive: false });
+  $("#zIn").addEventListener("click", () => zoomCenter(.62));
+  $("#zOut").addEventListener("click", () => zoomCenter(1 / .62));
+  $("#zReset").addEventListener("click", () => zoomTo(() => BASE_VB, 600));
+
+  // suggerimento iniziale: sparisce al primo gesto o dopo qualche secondo
+  let hintTimer = 0;
+  function hideHint() { $("#stageHint").classList.add("gone"); clearTimeout(hintTimer); }
+  function showHint() {
+    const touch = window.matchMedia && matchMedia("(pointer: coarse)").matches;
+    $("#stageHint").innerHTML = touch ? `Tocca un <span class="dot"></span> punto · due dita per ingrandire` : `Tocca un <span class="dot"></span> punto luminoso o una struttura · rotella per ingrandire`;
+    $("#stageHint").classList.remove("gone");
+    clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 8000);
+  }
 
   /* ---- zoom animato ---- */
   let zoomRaf = 0;

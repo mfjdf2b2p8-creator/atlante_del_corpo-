@@ -1008,15 +1008,341 @@ window.POINTS = (function () {
     medico: ["Una gamba sola gonfia, calda e dolente: urgente.", "Gonfiore con fiato corto.", "Gonfiore che non scende mai.", "Pelle arrossata, calda, con febbre."],
   });
 
+  /* ===================== NUOVE ZONE ===================== */
+  // --- Testa e collo ---
+  P({
+    id: "atm", layer: "ossa", view: "f", region: "collo", at: [238, 124], zoom: 150, parts: ["mandibola", "jATM"],
+    name: "Articolazione della mandibola", sub: "ATM · temporo-mandibolare",
+    dove: "Subito davanti all'orecchio, dove la mandibola si aggancia al cranio. Se appoggi un dito lì e apri la bocca, la senti muoversi.",
+    funzione: "Apre e chiude la bocca per masticare, parlare, sbadigliare. Dentro c'è un piccolo disco che fa da cuscinetto.",
+    problemi: [["Dolore muscolare (bruxismo)", "Mascella stanca o dolente al mattino, spesso con stress e denti serrati di notte."], ["Click o scatto", "Rumore aprendo la bocca: il disco scivola. Se non fa male, di solito non è un problema."], ["Apertura limitata", "La bocca non si apre del tutto o la mandibola devia di lato."]],
+    domande: [
+      D("Dove senti il fastidio?", [["Davanti all'orecchio", { articolare: 2 }, { pin: [238, 124] }], ["Sulla guancia, nel muscolo che mastica", { muscolare: 3 }, { pin: [233, 148] }], ["Sulla tempia, come un mal di testa", { muscolare: 2 }, { pin: [238, 90] }]]),
+      D("Senti un click o uno scatto aprendo la bocca?", [["No", { muscolare: 1 }], ["Sì, ma senza dolore", { click: 3 }], ["Sì, con dolore", { articolare: 2, click: 1 }]]),
+      D("Riesci ad aprire bene la bocca (tre dita una sopra l'altra)?", [["Sì", {}], ["Solo in parte, o la mandibola va di lato", { blocco: 3 }, { flag: "giallo" }], ["Si è bloccata all'improvviso, aperta o chiusa", { blocco: 3 }, { flag: "rosso", note: "Una mandibola bloccata va valutata a breve dal dentista o in pronto soccorso." }]]),
+      D("Ti svegli con la mascella stanca o ti dicono che digrigni i denti?", [["No", {}], ["Sì", { muscolare: 3 }]]),
+    ],
+    ipotesi: {
+      muscolare: ["Tensione dei muscoli masticatori", 1, "È la causa più comune, spesso legata a stress e bruxismo. Rilassare la mandibola durante il giorno e il calore aiutano molto."],
+      click: ["Disco che scatta, senza blocco", 1, "Il click senza dolore è frequente e spesso innocuo. Evita chewing-gum e cibi molto duri."],
+      articolare: ["Infiammazione dell'articolazione", 2, "Dolore proprio davanti all'orecchio: cibi morbidi per qualche giorno, niente aperture forzate (sbadigli ampi, panini alti)."],
+      blocco: ["Apertura limitata", 2, "Il disco può ostacolare il movimento: serve una valutazione da un dentista esperto di ATM o da un fisioterapista."],
+    },
+    sesso: { f: "I disturbi dell'ATM sono più frequenti nelle donne tra i 20 e i 40 anni." },
+    rimedi: [R.calore("Panno caldo sulla guancia 10–15 minuti, la sera."), R.postura("Durante il giorno: labbra chiuse, denti separati, lingua appoggiata dietro gli incisivi. Niente chewing-gum, unghie o penne tra i denti."), R.massaggio("Con due dita, cerchi lenti sulla guancia (il muscolo che si gonfia stringendo i denti), 1 minuto per lato."), R.tutore("Se digrigni di notte, il dentista può prepararti un bite.")],
+    esercizi: ["chin-tuck", "respirazione", "stretch-trapezio"],
+    medico: ["Mandibola bloccata aperta o chiusa.", "Dolore con gonfiore, febbre o dopo un colpo al viso.", "Dolore che dura più di 3–4 settimane o ti impedisce di mangiare.", "Dolore alla mascella con oppressione al petto o fiato corto: 112."],
+  });
+
+  P({
+    id: "cefalea-tensiva", layer: "muscoli", view: "b", region: "collo", at: [214, 132], zoom: 170, parts: ["occipitaleM", "splenio"],
+    name: "Muscoli della nuca", sub: "Cefalea muscolo-tensiva",
+    dove: "Alla base del cranio, dietro la testa: lo splenio e i piccoli muscoli sotto-occipitali collegano il cranio alle prime vertebre del collo.",
+    funzione: "Tengono su la testa e fanno piccoli aggiustamenti per lo sguardo. Lavorano tantissimo quando la testa sta in avanti (schermo, telefono).",
+    problemi: [["Cefalea tensiva", "Mal di testa «a casco» o a fascia, pesante, che peggiora a fine giornata."], ["Cefalea dal collo (cervicogenica)", "Parte dalla nuca e sale su un lato fino all'occhio; cambia con i movimenti del collo."], ["Contratture sotto-occipitali", "Punti duri e dolenti alla base del cranio."]],
+    domande: [
+      D("Dove senti il mal di testa?", [["A fascia, tutto intorno alla testa", { tensiva: 3 }, { pin: [228, 108] }], ["Parte dalla nuca e sale su un lato", { cervicogenica: 3 }, { pin: [216, 132] }], ["Solo alla base del cranio", { contrattura: 3 }, { pin: [210, 140] }]]),
+      D("Muovere il collo o premere sulla nuca lo cambia?", [["Sì, lo riproduce o lo peggiora", { cervicogenica: 2, contrattura: 2 }], ["No, non cambia", { tensiva: 1 }]]),
+      D("Quante ore al giorno passi davanti a schermi o telefono?", [["Meno di 3", {}], ["Da 3 a 6", { tensiva: 1, contrattura: 1 }], ["Più di 6", { tensiva: 2, contrattura: 2 }]]),
+      D("Hai uno di questi: mal di testa improvviso e fortissimo, febbre con collo rigido, disturbi della vista o della parola, debolezza di un lato?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Sono segnali da valutare subito: chiama il 112 o vai in pronto soccorso." }]]),
+    ],
+    ipotesi: {
+      tensiva: ["Cefalea di tipo tensivo", 1, "La più comune: legata a stress, sonno e postura. Pause, movimento e rilassamento della nuca riducono frequenza e intensità."],
+      cervicogenica: ["Cefalea che parte dal collo", 2, "Il dolore nasce dalle articolazioni e dai muscoli alti del collo. Esercizi di mobilità e rinforzo dei flessori profondi funzionano bene."],
+      contrattura: ["Contratture sotto-occipitali", 1, "Muscoli piccoli ma sovraccarichi: automassaggio con due palline e retrazione del mento."],
+    },
+    eta: { over: [50, "Un mal di testa nuovo, o diverso dal solito, dopo i 50 anni va sempre fatto vedere dal medico."] },
+    rimedi: [R.calore("Doccia calda o borsa calda sulla nuca per 15 minuti."), R.massaggio("Due palline da tennis in un calzino sotto la base del cranio, da sdraiato, 2 minuti di respiri lenti."), R.postura("Schermo all'altezza degli occhi, telefono in alto, 2 minuti di pausa ogni 45."), ["riposo", "Sonno e abitudini", "Orari di sonno regolari, acqua e pasti regolari: saltarli scatena spesso la cefalea."]],
+    esercizi: ["chin-tuck", "stretch-trapezio", "circonduzioni-spalle", "respirazione"],
+    medico: ["Mal di testa improvviso e fortissimo («il peggiore della vita»): 112.", "Febbre e collo rigido.", "Disturbi della vista, della parola o debolezza di un lato.", "Mal di testa dopo un colpo alla testa.", "Mal di testa nuovo dopo i 50 anni o che cambia carattere."],
+  });
+
+  // --- Torace ---
+  P({
+    id: "costocondrite", layer: "ossa", view: "f", region: "torace", at: [213, 238], zoom: 210, parts: ["cartCostali", "sterno"],
+    name: "Cartilagini costali", sub: "Costocondrite · sindrome di Tietze",
+    dove: "Sono i tratti di cartilagine che uniscono le costole allo sterno, davanti al petto (in grigio-azzurro nel disegno).",
+    funzione: "Rendono la gabbia toracica elastica: si allarga a ogni respiro e assorbe i colpi.",
+    problemi: [["Costocondrite", "Dolore puntiforme a lato dello sterno, che aumenta respirando a fondo o premendo."], ["Sovraccarico da allenamento", "Dopo panca, piegamenti, trazioni o tanta tosse."], ["Contusione", "Dopo un colpo al petto."]],
+    domande: [
+      D("Premendo con un dito a lato dello sterno trovi il punto che fa male?", [["Sì, proprio lì", { costo: 3 }, { pin: [212, 236] }], ["Più in basso, sotto il petto", { arcata: 2 }, { pin: [228, 292] }], ["No, il dolore è profondo e diffuso", {}, { flag: "giallo", note: "Un dolore al petto che non si riproduce premendo va fatto vedere dal medico." }]]),
+      D("Cosa lo peggiora?", [["Respiro profondo, tosse, girare il busto", { costo: 2, arcata: 1 }], ["Le spinte in palestra", { sovraccarico: 3 }], ["La fatica o le salite, e passa a riposo", {}, { flag: "urgente", note: "Un dolore al petto che compare con lo sforzo e passa a riposo va valutato subito dal medico." }]]),
+      D("C'è un gonfiore visibile sulla cartilagine?", [["No", {}], ["Sì", { tietze: 3 }]]),
+      D("Senti oppressione, sudore freddo, fiato corto o dolore al braccio sinistro o alla mascella?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Questi segni vanno valutati subito: chiama il 112." }]]),
+    ],
+    ipotesi: {
+      costo: ["Costocondrite", 1, "Un'infiammazione benigna delle cartilagini: fa male ma non è pericolosa. Migliora in qualche settimana riducendo gli sforzi che la provocano."],
+      sovraccarico: ["Sovraccarico da allenamento", 1, "Riduci per 1–2 settimane panca, dip e piegamenti; il resto dell'allenamento puoi mantenerlo."],
+      arcata: ["Fastidio all'arcata costale", 1, "Le costole basse si irritano con torsioni ripetute o tosse: respirazione e mobilità dolce del torace."],
+      tietze: ["Possibile sindrome di Tietze", 2, "Quando la cartilagine è anche gonfia conviene una visita per confermarlo."],
+    },
+    rimedi: [R.calore("Borsa calda 15 minuti, più volte al giorno."), R.gel(), R.riposo("Niente spinte pesanti o esercizi per il petto per 1–2 settimane; cammina e muoviti normalmente."), R.postura("Dormi sulla schiena o sul lato che non fa male.")],
+    esercizi: ["respirazione", "estensione-toracica", "stretch-pettorale"],
+    medico: ["Dolore al petto con oppressione, fiato corto, sudore freddo o che va al braccio o alla mascella: 112.", "Dolore che compare con lo sforzo e passa a riposo.", "Febbre, tosse con catarro o dolore che aumenta.", "Dopo un colpo forte al petto."],
+  });
+
+  P({
+    id: "nevralgia-intercostale", layer: "nervi", view: "f", region: "torace", at: [244, 268], zoom: 230, parts: ["intercostali"],
+    name: "Nervi intercostali", sub: "Nevralgia intercostale",
+    dove: "Corrono sotto ogni costola, dalla colonna dorsale fino al davanti del torace.",
+    funzione: "Danno sensibilità alla pelle del torace e comandano i muscoli tra le costole che aiutano a respirare.",
+    problemi: [["Nevralgia intercostale", "Dolore a fitta o bruciore che segue una costola, «a cintura»."], ["Irritazione dalla colonna dorsale", "Un blocco tra le vertebre dorsali può mandare dolore lungo la costola."], ["Herpes zoster (fuoco di Sant'Antonio)", "Bruciore su una fascia di un solo lato; dopo qualche giorno compaiono vescicole."]],
+    domande: [
+      D("Che tipo di dolore è?", [["Una fitta o una scossa lungo la costola", { nevralgia: 3 }, { pin: [244, 268] }], ["Bruciore sulla pelle, su un solo lato", { zoster: 3 }, { pin: [236, 262] }], ["Sordo, che parte dalla schiena", { toracica: 3 }, { pin: [262, 284] }]]),
+      D("Sono comparse macchie rosse o piccole vescicole sulla zona?", [["No", {}], ["Sì", { zoster: 4 }, { flag: "rosso", note: "Se compaiono vescicole a fascia senti il medico entro 72 ore: gli antivirali funzionano meglio se presi presto." }]]),
+      D("Ruotare il busto o respirare a fondo lo riproduce?", [["Sì", { nevralgia: 1, toracica: 2 }], ["No", { zoster: 1 }]]),
+      D("Hai oppressione al petto, fiato corto o sudore freddo?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Chiama subito il 112." }]]),
+    ],
+    ipotesi: {
+      nevralgia: ["Nevralgia intercostale", 1, "Il nervo è irritato: calore, movimento dolce del busto e respirazione lenta aiutano."],
+      toracica: ["Origine dalla colonna dorsale", 1, "Spesso la causa è una rigidità tra le vertebre: lavora sulla mobilità del dorso (vedi «Colonna toracica»)."],
+      zoster: ["Sospetto herpes zoster", 3, "Il bruciore a fascia su un solo lato, con vescicole, è tipico: serve il medico presto."],
+    },
+    eta: { over: [50, "Dopo i 50 anni l'herpes zoster è più frequente: se il bruciore è su un solo lato, controlla la pelle nei giorni seguenti."] },
+    rimedi: [R.calore(), R.postura("Cambia spesso posizione; evita di stare a lungo curvo in avanti."), ["farmacia", "Farmacia", "Per il dolore dei nervi chiedi al farmacista o al medico: i normali antinfiammatori a volte funzionano poco."]],
+    esercizi: ["respirazione", "estensione-toracica", "gatto-cammello"],
+    medico: ["Vescicole o macchie rosse su una fascia del torace.", "Dolore al petto con oppressione o fiato corto: 112.", "Dolore che non cambia con la posizione e il respiro.", "Febbre o calo di peso."],
+  });
+
+  // --- Addome e inguine ---
+  P({
+    id: "pubalgia", layer: "tendini", view: "f", region: "addome", at: [210, 498], zoom: 200, parts: ["pubeT", "adduttoriT"],
+    name: "Pube e tendini adduttori", sub: "Pubalgia · dolore inguinale dello sportivo",
+    dove: "In basso al centro, dove si uniscono le due ossa del bacino (sinfisi pubica). Lì si attaccano i tendini degli adduttori e degli addominali.",
+    funzione: "È il punto d'incontro tra le forze dell'addome e quelle dell'interno coscia: lavora in ogni cambio di direzione, calcio e scatto.",
+    problemi: [["Pubalgia da adduttori", "Dolore all'inguine e all'interno coscia, tipico di calcio, rugby, hockey, padel."], ["Inguine dello sportivo", "Dolore sopra il pube che peggiora con scatti, tosse o addominali."], ["Sovraccarico della sinfisi", "Dolore proprio sull'osso al centro, nei casi di lungo sovraccarico."]],
+    domande: [
+      D("Dove senti di più il dolore?", [["Interno coscia, vicino all'inguine", { adduttori: 3 }, { pin: [214, 508] }], ["Sopra il pube, verso la pancia", { addominale: 3 }, { pin: [220, 478] }], ["Proprio al centro, sull'osso", { sinfisi: 3 }, { pin: [204, 496] }]]),
+      D("Cosa lo scatena?", [["Calciare, aprire le gambe, cambi di direzione", { adduttori: 2 }], ["Scatti, addominali, tosse o starnuti", { addominale: 2 }], ["Anche camminare o girarmi nel letto", { sinfisi: 2 }, { flag: "giallo" }]]),
+      D("Stringendo un pallone tra le ginocchia da sdraiato, senti dolore all'inguine?", [["No", {}], ["Sì, un po'", { adduttori: 2 }], ["Sì, forte", { adduttori: 2, sinfisi: 1 }, { flag: "giallo" }]]),
+      D("C'è un rigonfiamento all'inguine che compare quando tossisci o stai in piedi?", [["No", {}], ["Sì", {}, { flag: "rosso", note: "Un rigonfiamento può essere un'ernia: guarda il punto «Canale inguinale» e fatti visitare." }]]),
+    ],
+    ipotesi: {
+      adduttori: ["Pubalgia da adduttori", 1, "La forma più comune. Il rinforzo progressivo degli adduttori (squeeze, poi Copenaghen) è la base del recupero: 6–12 settimane."],
+      addominale: ["Inguine dello sportivo (parete addominale)", 2, "Se dopo 6–8 settimane di rinforzo non migliora serve una visita specialistica."],
+      sinfisi: ["Sovraccarico della sinfisi pubica", 2, "Stop a scatti e calci, rinforzo dolce del core; fatti seguire da un fisioterapista."],
+    },
+    sesso: { f: "In gravidanza e dopo il parto il dolore al pube (sinfisi) è frequente: chiedi una valutazione all'ostetrica o a un fisioterapista del pavimento pelvico." },
+    rimedi: [R.ghiaccio("10–15 minuti sull'inguine dopo l'allenamento."), R.riposo("Stop a calci, scatti e cambi di direzione finché lo squeeze non è indolore; la corsa leggera in linea retta va bene."), R.tape("Pantaloncini compressivi danno un po' di sostegno durante l'attività.")],
+    esercizi: ["squeeze-adduttori", "ponte", "dead-bug", "plank-laterale"],
+    medico: ["Rigonfiamento all'inguine.", "Dolore che dura più di 6–8 settimane nonostante riposo ed esercizi.", "Febbre, o dolore anche a riposo e di notte.", "Disturbi urinari."],
+  });
+
+  P({
+    id: "ernia-inguinale", layer: "tendini", view: "f", region: "addome", at: [234, 468], zoom: 210, parts: ["inguinale", "anelloIng"],
+    name: "Canale inguinale", sub: "Ernia inguinale e femorale",
+    dove: "Un piccolo passaggio nella parete dell'addome, appena sopra la piega dell'inguine, lungo il legamento inguinale.",
+    funzione: "Nell'uomo ci passa il funicolo del testicolo, nella donna un legamento dell'utero: è un punto naturalmente più debole della parete.",
+    problemi: [["Ernia inguinale", "Un rigonfiamento che compare in piedi o tossendo e rientra da sdraiati."], ["Ernia femorale", "Più in basso, sotto la piega dell'inguine; relativamente più frequente nelle donne."], ["Dolore senza ernia", "Negli sport con scatti e calci la parete può far male senza alcun rigonfiamento."]],
+    domande: [
+      D("Vedi o senti un rigonfiamento?", [["Sì, sopra la piega dell'inguine", { inguinale: 3 }, { pin: [222, 476] }], ["Sì, sotto la piega, verso la coscia", { femorale: 3 }, { pin: [234, 496] }], ["No, solo dolore", { sportivo: 3 }]]),
+      D("Il rigonfiamento rientra quando ti sdrai o lo spingi piano?", [["Sì", { inguinale: 1 }], ["No: è duro, dolente e non rientra", {}, { flag: "urgente", note: "Un'ernia che non rientra ed è dolente può essere strozzata: pronto soccorso subito." }], ["Non c'è rigonfiamento", { sportivo: 1 }]]),
+      D("Hai nausea, vomito o la pancia gonfia e dura?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Insieme a un rigonfiamento all'inguine è un'emergenza: pronto soccorso." }]]),
+    ],
+    ipotesi: {
+      inguinale: ["Possibile ernia inguinale", 2, "Se rientra non è pericolosa, ma va valutata dal medico: spesso si opera in modo programmato. Nel frattempo evita sforzi in apnea."],
+      femorale: ["Possibile ernia femorale", 3, "Va valutata a breve perché si strozza più facilmente."],
+      sportivo: ["Dolore della parete senza ernia", 1, "Probabile sovraccarico: guarda anche «Pube e tendini adduttori»."],
+    },
+    sesso: { m: "L'ernia inguinale è molto più frequente negli uomini.", f: "Nelle donne l'ernia femorale è relativamente più frequente: un rigonfiamento sotto la piega dell'inguine va fatto vedere presto." },
+    rimedi: [R.postura("Espira mentre sollevi un peso, non trattenere il fiato; niente carichi massimali finché non sei stato visitato."), R.riposo("Puoi continuare a muoverti e ad allenarti in modo leggero se non fa male."), R.tutore("Le cinture contenitive si usano solo su consiglio del chirurgo.")],
+    esercizi: ["respirazione", "dead-bug", "ponte"],
+    medico: ["Rigonfiamento duro, dolente, che non rientra: pronto soccorso.", "Nausea, vomito, pancia gonfia: pronto soccorso.", "Qualsiasi rigonfiamento nuovo all'inguine: visita programmata.", "Dolore o gonfiore al testicolo."],
+  });
+
+  // --- Braccio ---
+  P({
+    id: "tricipite", layer: "muscoli", view: "b", region: "braccio", at: [293, 316], zoom: 220, parts: ["tricipite"],
+    name: "Tricipite brachiale", sub: "Triceps brachii",
+    dove: "Dietro al braccio, dalla spalla al gomito. Ha tre capi in alto e un unico tendine che si attacca alla punta del gomito (olecrano).",
+    funzione: "Distende il gomito: spinte, piegamenti, dip, lanci, colpi di racchetta.",
+    problemi: [["Contrattura o indolenzimento", "Dopo dip, french press o tanti piegamenti."], ["Tendinopatia del tricipite", "Dolore appena sopra la punta del gomito nelle spinte."], ["Borsite olecranica", "Gonfiore morbido sulla punta del gomito, spesso dopo appoggi o colpi."]],
+    domande: [
+      D("Dove senti il fastidio?", [["Nel muscolo, dietro al braccio", { doms: 2 }, { pin: [293, 316] }], ["Appena sopra la punta del gomito", { tendine: 3 }, { pin: [297, 364] }], ["Sulla punta del gomito, che è gonfia", { borsite: 3 }, { pin: [296, 378] }]]),
+      D("Quando è iniziato?", [["1–3 giorni dopo un allenamento nuovo o intenso", { doms: 3 }], ["Piano piano, con tante spinte", { tendine: 2 }], ["Dopo un colpo o tanti appoggi sul gomito", { borsite: 2 }]]),
+      D("La punta del gomito è calda, arrossata o hai febbre?", [["No", {}], ["Sì", { borsite: 2 }, { flag: "rosso", note: "Una borsite calda e arrossata può essere infetta: senti il medico in giornata." }]]),
+      D("Dopo uno strappo, riesci a distendere il gomito con forza?", [["Non ho avuto strappi", {}], ["Sì", { tendine: 1 }], ["No, è nettamente debole", {}, { flag: "rosso", note: "Debolezza improvvisa nel distendere il gomito dopo uno sforzo: va esclusa una lesione del tendine." }]]),
+    ],
+    ipotesi: {
+      doms: ["Indolenzimento da allenamento", 1, "Passa in 2–4 giorni; il movimento leggero aiuta."],
+      tendine: ["Tendinopatia del tricipite", 2, "Riduci dip e french press pesanti; lavora con carichi lenti e progressivi."],
+      borsite: ["Borsite olecranica", 2, "Non appoggiarti sul gomito; ghiaccio e protezione. Se è calda e rossa, vai dal medico."],
+    },
+    rimedi: [R.calore("Per il muscolo indolenzito, doccia calda e movimento leggero."), R.ghiaccio("Sulla punta del gomito se è gonfia."), R.riposo("Niente dip e spinte pesanti per 1–2 settimane."), R.postura("Non appoggiare il gomito su tavoli e braccioli duri.")],
+    esercizi: ["stretch-tricipite", "push-up-muro", "rematore-elastico"],
+    medico: ["Punta del gomito calda, rossa, con febbre.", "Schiocco con debolezza nel distendere il gomito.", "Gonfiore dopo una caduta sul gomito.", "Dolore che non migliora in 3 settimane."],
+  });
+
+  // --- Polso e mano ---
+  P({
+    id: "dito-scatto", layer: "tendini", view: "f", region: "polso", at: [322, 534], zoom: 130, parts: ["guaineFless"],
+    name: "Tendini flessori delle dita", sub: "Dito a scatto · tenosinovite",
+    dove: "Nel palmo e lungo le dita i tendini che chiudono la mano scorrono dentro guaine con piccoli anelli (pulegge). Il primo anello è all'altezza della nocca, nel palmo.",
+    funzione: "Fanno chiudere la mano: prese, trazioni, arrampicata, attrezzi.",
+    problemi: [["Dito a scatto", "Il dito si blocca piegato e scatta quando lo stendi, soprattutto al mattino."], ["Tenosinovite dei flessori", "Dolore e gonfiore lungo il dito dopo tanta presa."], ["Lesione di una puleggia", "Nell'arrampicata: «pop» e dolore alla base del dito."]],
+    domande: [
+      D("Quale dito ti dà fastidio?", [["Il pollice", { scatto: 1 }, { pin: [341, 524] }], ["Il medio o l'anulare", { scatto: 1 }, { pin: [318, 536] }], ["L'indice o il mignolo", { scatto: 1 }, { pin: [330, 536] }]]),
+      D("Il dito si blocca o scatta?", [["Sì, soprattutto al mattino", { scatto: 3 }], ["No, ma è gonfio e dolente lungo il dito", { teno: 3 }], ["Ho sentito un «pop» durante una presa", { puleggia: 4 }, { flag: "giallo" }]]),
+      D("Senti un nodulo nel palmo, alla base del dito?", [["Sì", { scatto: 2 }], ["No", {}]]),
+      D("Il dito è rosso, caldo e gonfio come una salsiccia, magari dopo una piccola ferita?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Può essere un'infezione della guaina del tendine: pronto soccorso subito." }]]),
+    ],
+    ipotesi: {
+      scatto: ["Dito a scatto", 2, "Il tendine ispessito fatica a passare nel primo anello. Riposo dalle prese forti e stretching dolce; se non passa, un'infiltrazione spesso lo risolve."],
+      teno: ["Tenosinovite da sovraccarico", 1, "Riduci la presa per 1–2 settimane e alterna le attività."],
+      puleggia: ["Possibile lesione di una puleggia", 2, "Tipica di chi arrampica: stop alle prese piccole e valutazione da un fisioterapista della mano."],
+    },
+    sesso: { f: "Il dito a scatto è più frequente nelle donne." },
+    eta: { over: [45, "Dopo i 45 anni, e in chi ha il diabete, il dito a scatto è più frequente."] },
+    rimedi: [R.calore("Mano in acqua calda per 10 minuti al mattino: aiuta a sbloccare il dito."), R.riposo("Riduci le prese forti e prolungate (attrezzi, trazioni, borse pesanti)."), R.tutore("Uno splint che tiene dritto il dito di notte riduce il blocco al mattino."), R.massaggio("Massaggio leggero sul nodulo nel palmo, 1 minuto.")],
+    esercizi: ["stretch-flessori", "stretch-estensori"],
+    medico: ["Dito rosso, caldo e gonfio dopo una ferita: pronto soccorso.", "Dito bloccato che non riesci più a stendere.", "Nessun miglioramento in 4–6 settimane.", "«Pop» con livido alla base del dito."],
+  });
+
+  P({
+    id: "rizoartrosi", layer: "ossa", view: "f", region: "polso", at: [331, 505], zoom: 130, parts: ["trapezioMC", "jPollice"],
+    name: "Base del pollice", sub: "Rizoartrosi · articolazione trapezio-metacarpale",
+    dove: "Alla radice del pollice, vicino al polso, dove il primo metacarpo si appoggia su un piccolo osso a forma di sella (trapezio).",
+    funzione: "Permette al pollice di opporsi alle altre dita: pinza, girare una chiave, aprire un barattolo.",
+    problemi: [["Rizoartrosi", "Usura della cartilagine: dolore alla base del pollice nelle prese a pinza."], ["Distorsione del pollice", "Dopo una caduta con il pollice aperto (sci, pallone): dolore all'interno della base."], ["De Quervain", "Il dolore è più sul lato del polso, lungo i tendini: vedi lo strato Tendini."]],
+    domande: [
+      D("Dove indichi il dolore?", [["Proprio alla radice del pollice", { rizo: 3 }, { pin: [331, 505] }], ["Sul lato del polso, un po' più in su", { dq: 3 }, { pin: [327, 486] }], ["All'interno della base del pollice, dopo una caduta", { distorsione: 3 }, { pin: [337, 520] }]]),
+      D("Fa male girare una chiave, aprire un barattolo o scrivere?", [["Sì, molto", { rizo: 2 }], ["Un po'", { rizo: 1, dq: 1 }], ["No", {}]]),
+      D("La base del pollice è diventata più sporgente o «squadrata»?", [["Sì", { rizo: 2 }], ["No", {}]]),
+      D("Se sei caduto, riesci a stringere con forza tra pollice e indice?", [["Non sono caduto", {}], ["Sì", { distorsione: 1 }], ["No, è debole e instabile", { distorsione: 2 }, { flag: "rosso", note: "Un pollice instabile dopo una caduta va visto da un ortopedico entro pochi giorni." }]]),
+    ],
+    ipotesi: {
+      rizo: ["Rizoartrosi", 1, "Molto comune dopo i 50 anni. Tutore notturno, esercizi di stabilità e oggetti che riducono lo sforzo di presa."],
+      dq: ["Possibile De Quervain", 1, "Guarda il punto «Tendini del pollice» nello strato Tendini."],
+      distorsione: ["Distorsione del pollice", 2, "Il legamento interno del pollice può lesionarsi: tutore e visita se è instabile."],
+    },
+    sesso: { f: "La rizoartrosi è molto più frequente nelle donne, soprattutto dopo la menopausa." },
+    eta: { over: [50, "Dopo i 50 anni la rizoartrosi è frequente: muoversi e rinforzare aiuta più del riposo assoluto."] },
+    rimedi: [R.tutore("Un tutore per il pollice (da farmacia o su misura) di notte e nelle attività pesanti."), R.calore("Acqua calda al mattino per la rigidità."), R.postura("Usa apribarattoli, impugnature più grosse e penne spesse; evita la pinza stretta e prolungata."), R.gel()],
+    esercizi: ["stretch-flessori", "stretch-estensori"],
+    medico: ["Pollice instabile o deformato dopo una caduta.", "Gonfiore caldo e arrossato.", "Dolore che non migliora con 6–8 settimane di tutore ed esercizi.", "Formicolio a pollice, indice e medio (vedi «Tunnel carpale»)."],
+  });
+
+  P({
+    id: "ganglio-polso", layer: "tendini", view: "b", region: "polso", at: [317, 489], zoom: 140, parts: ["retinacoloB"],
+    name: "Dorso del polso", sub: "Cisti gangliare · sovraccarico dorsale",
+    dove: "Sul dorso del polso, dove i tendini estensori passano sotto una fascia (retinacolo) sopra le ossa del carpo.",
+    funzione: "I tendini estensori sollevano mano e dita; le ossa del carpo reggono il carico nei piegamenti e nelle spinte.",
+    problemi: [["Cisti gangliare", "Pallina morbida sul dorso del polso, più visibile piegandolo."], ["Impingement dorsale", "Dolore sul dorso del polso in piegamenti, burpee, front squat."], ["Sovraccarico degli estensori", "Dolore lungo il dorso dopo tanto mouse o tastiera."]],
+    domande: [
+      D("Vedi o senti una pallina sul dorso del polso?", [["Sì, morbida, a volte più grande a volte più piccola", { ganglio: 4 }, { pin: [318, 488] }], ["No", { impingement: 1, estensori: 1 }]]),
+      D("Cosa provoca il dolore?", [["Appoggiarmi sulle mani a polso piegato (piegamenti, plank)", { impingement: 3 }], ["Mouse, tastiera, tanta scrittura", { estensori: 3 }], ["Quasi niente: la pallina non fa male", { ganglio: 1 }]]),
+      D("Sei caduto sulla mano aperta e fa male nell'incavo alla base del pollice («tabacchiera»)?", [["No", {}], ["Sì", {}, { flag: "rosso", note: "Dopo una caduta sulla mano, il dolore nella tabacchiera può indicare una frattura dello scafoide: serve una radiografia." }]]),
+    ],
+    ipotesi: {
+      ganglio: ["Cisti gangliare", 1, "È benigna: spesso si riduce o sparisce da sola. Non va schiacciata. Se dà fastidio il medico può aspirarla."],
+      impingement: ["Impingement dorsale del polso", 1, "Nei piegamenti usa impugnature o i pugni, oppure un rialzo sotto il palmo per ridurre l'angolo."],
+      estensori: ["Sovraccarico degli estensori", 1, "Pause, polso dritto sul mouse, allungamenti e rinforzo lento."],
+    },
+    rimedi: [R.ghiaccio("Dopo l'attività se il dorso è dolente."), R.postura("Nei piegamenti usa maniglie o i pugni; sul mouse polso dritto e appoggiato."), R.tutore("Una polsiera morbida nelle attività che lo provocano."), R.riposo()],
+    esercizi: ["stretch-estensori", "polso-eccentrico-est", "stretch-flessori"],
+    medico: ["Dopo una caduta: dolore nella tabacchiera anatomica (serve una radiografia).", "Pallina dura, che cresce in fretta o con formicolio.", "Polso caldo, arrossato e gonfio.", "Dolore che non migliora in 4–6 settimane."],
+  });
+
+  // --- Ginocchio ---
+  P({
+    id: "zampa-oca", layer: "tendini", view: "f", region: "ginocchio", at: [224, 722], zoom: 200, parts: ["zampaOca"],
+    name: "Zampa d'oca", sub: "Tendinopatia e borsite anserina",
+    dove: "Sul lato interno del ginocchio, 3–5 cm sotto la linea articolare: lì si uniscono i tendini di sartorio, gracile e semitendinoso.",
+    funzione: "Aiutano a piegare il ginocchio e lo proteggono dalle spinte verso l'interno.",
+    problemi: [["Tendinopatia della zampa d'oca", "Dolore sul lato interno, sotto il ginocchio, salendo le scale o alzandosi dalla sedia."], ["Borsite anserina", "Gonfiore morbido e dolore al tatto in quel punto, spesso insieme all'artrosi del ginocchio."], ["Da non confondere con il menisco", "Il menisco fa male più in alto, proprio sulla linea del ginocchio."]],
+    domande: [
+      D("Dove fa più male premendo?", [["3–5 cm sotto il ginocchio, lato interno", { zampa: 3 }, { pin: [224, 722] }], ["Proprio sulla linea del ginocchio, lato interno", { menisco: 3 }, { pin: [215, 700] }], ["Lungo il bordo interno, sopra e sotto il ginocchio", { lcm: 3 }, { pin: [217, 690] }]]),
+      D("Cosa lo peggiora?", [["Scale, alzarmi dalla sedia, corsa", { zampa: 2 }], ["Torsioni e accovacciarmi", { menisco: 2 }], ["Dormire con le ginocchia una sull'altra", { zampa: 2 }]]),
+      D("Il ginocchio si è gonfiato tutto o si blocca?", [["No", {}], ["Sì", { menisco: 2 }, { flag: "giallo", note: "Gonfiore e blocchi fanno pensare al menisco: guarda il punto «Menisco» nello strato Ossa." }]]),
+    ],
+    ipotesi: {
+      zampa: ["Tendinopatia o borsite della zampa d'oca", 1, "Per qualche settimana riduci corse in discesa e scale; rinforza glutei e quadricipite; di notte cuscino tra le ginocchia."],
+      menisco: ["Possibile origine dal menisco", 2, "Vedi il punto «Menisco» nello strato Ossa."],
+      lcm: ["Legamento collaterale mediale", 2, "Vedi «Legamenti del ginocchio» in questo strato."],
+    },
+    sesso: { f: "È più frequente nelle donne, soprattutto con ginocchia «a X»." },
+    eta: { over: [50, "Dopo i 50 anni la borsite anserina accompagna spesso l'artrosi del ginocchio: muoversi e perdere qualche chilo aiuta molto."] },
+    rimedi: [R.ghiaccio(), R.gel(), R.postura("Di notte un cuscino tra le ginocchia; scarpe ammortizzate per la corsa."), R.riposo("Niente discese di corsa e scale ripetute per 2–3 settimane.")],
+    esercizi: ["abduzione-fianco", "ponte", "estensione-ginocchio", "stretch-ischio"],
+    medico: ["Ginocchio molto gonfio, caldo o arrossato.", "Ginocchio che si blocca o cede.", "Dolore che non migliora in 4–6 settimane.", "Febbre."],
+  });
+
+  P({
+    id: "baker", layer: "ossa", view: "b", region: "ginocchio", at: [236, 690], zoom: 210, parts: ["jPoplitea"],
+    name: "Cavo popliteo", sub: "Cisti di Baker",
+    dove: "Dietro al ginocchio, nell'incavo. La cisti è una sacca piena del liquido dell'articolazione.",
+    funzione: "Il liquido sinoviale nutre e lubrifica il ginocchio: se il ginocchio è irritato ne produce di più e può gonfiare una sacca sul retro.",
+    problemi: [["Cisti di Baker", "Gonfiore e tensione dietro al ginocchio, peggio a gamba tutta piegata o tutta tesa."], ["Rottura della cisti", "Dolore improvviso al polpaccio con gonfiore: somiglia a una trombosi."], ["Tendini posteriori", "Dolore dietro-lato del ginocchio in corsa e in discesa."]],
+    domande: [
+      D("Senti una pallina o una tensione dietro al ginocchio?", [["Sì, un gonfiore morbido nell'incavo", { baker: 3 }, { pin: [234, 690] }], ["No, è un dolore sul lato, dietro", { tendine: 3 }, { pin: [253, 694] }]]),
+      D("Hai anche problemi dentro il ginocchio (artrosi, menisco, ginocchio gonfio)?", [["Sì", { baker: 2 }], ["No", { tendine: 1 }]]),
+      D("Il polpaccio è gonfio, caldo, dolente o arrossato?", [["No", {}], ["Sì", {}, { flag: "urgente", note: "Un polpaccio gonfio, caldo e dolente va controllato subito per escludere una trombosi." }]]),
+    ],
+    ipotesi: {
+      baker: ["Cisti di Baker", 1, "Di solito è la spia di un problema dentro il ginocchio: curando quello, la cisti si riduce. Tieni il ginocchio in movimento."],
+      tendine: ["Tendinopatia posteriore del ginocchio", 1, "Riduci discese e scatti; rinforza ischiocrurali e polpaccio."],
+    },
+    eta: { over: [50, "Dopo i 50 anni la cisti di Baker è quasi sempre legata all'artrosi del ginocchio."] },
+    rimedi: [R.ghiaccio("10–15 minuti dietro al ginocchio se è gonfio."), R.riposo("Muovi il ginocchio senza forzare la piega massima; per un po' evita accosciate profonde."), R.tutore("Una ginocchiera elastica può dare sollievo.")],
+    esercizi: ["estensione-ginocchio", "pompa-caviglia", "ponte", "stretch-polpaccio"],
+    medico: ["Polpaccio gonfio, caldo e dolente: urgente.", "Gonfiore che aumenta in fretta o impedisce di piegare il ginocchio.", "Febbre.", "Ginocchio che si blocca."],
+  });
+
+  // --- Piede ---
+  P({
+    id: "alluce-valgo", layer: "ossa", view: "f", region: "piede", at: [210, 940], zoom: 140, parts: ["alluceB", "jAlluce"],
+    name: "Alluce", sub: "Alluce valgo · alluce rigido",
+    dove: "L'articolazione alla base dell'alluce, tra il primo metatarso e la prima falange: è il punto che sporge sul lato interno del piede.",
+    funzione: "A ogni passo il peso passa sull'alluce per spingere: nella corsa porta 2–3 volte il peso del corpo.",
+    problemi: [["Alluce valgo", "L'alluce devia verso le altre dita e alla base sporge una «cipolla»."], ["Alluce rigido", "Artrosi: l'alluce si piega poco verso l'alto e fa male in spinta."], ["Gotta", "Attacco improvviso: alluce rosso, caldo, dolorosissimo, spesso di notte."]],
+    domande: [
+      D("Com'è l'alluce?", [["Deviato verso le altre dita, con una sporgenza", { valgo: 3 }, { pin: [208, 940] }], ["Dritto, ma rigido e dolente sopra", { rigido: 3 }, { pin: [211, 936] }], ["Rosso, caldo e gonfio all'improvviso", { gotta: 4 }, { flag: "rosso", note: "Un attacco così può essere gotta: senti il medico a breve." }]]),
+      D("Cosa fa male?", [["Le scarpe strette sulla sporgenza", { valgo: 2 }], ["Spingere sulle punte, correre, salire", { rigido: 2 }], ["Anche il lenzuolo che sfiora il dito", { gotta: 2 }]]),
+      D("Hai il diabete o problemi di circolazione, e una ferita sul piede?", [["No", {}], ["Sì", {}, { flag: "rosso", note: "Con il diabete ogni ferita del piede va mostrata al medico." }]]),
+    ],
+    ipotesi: {
+      valgo: ["Alluce valgo", 1, "Scarpe con pianta larga, distanziatore tra le dita e rinforzo del piede riducono il fastidio. Si opera solo se il dolore limita la vita di tutti i giorni."],
+      rigido: ["Alluce rigido", 1, "Scarpe con suola rigida e un po' «a dondolo» riducono la spinta sull'alluce."],
+      gotta: ["Possibile gotta", 2, "Serve il medico: esami del sangue e una cura per l'attacco."],
+    },
+    sesso: { f: "L'alluce valgo è molto più frequente nelle donne, anche per scarpe strette e con il tacco." },
+    rimedi: [R.postura("Scarpe con pianta larga e tacco basso; evita le punte strette."), R.tutore("Distanziatore in silicone tra alluce e secondo dito; plantare su misura se serve."), R.ghiaccio("Dopo una giornata in piedi se l'articolazione è infiammata.")],
+    esercizi: ["rullo-plantare", "equilibrio", "calf-raise"],
+    medico: ["Alluce rosso, caldo e gonfio all'improvviso.", "Ferite o pelle che si rompe sulla sporgenza, soprattutto con il diabete.", "Dolore che limita il camminare nonostante scarpe adatte."],
+  });
+
+  P({
+    id: "frattura-stress", layer: "ossa", view: "f", region: "piede", at: [227, 933], zoom: 150, parts: ["metatarsi"],
+    name: "Metatarsi", sub: "Frattura da stress · metatarsalgia",
+    dove: "Le cinque ossa lunghe del piede, tra la caviglia e le dita. Il secondo e il terzo sono i più colpiti dalle fratture da stress.",
+    funzione: "Formano l'arco anteriore del piede e distribuiscono il peso durante la spinta.",
+    problemi: [["Frattura da stress", "Una piccola crepa da sovraccarico: dolore puntiforme sul dorso del piede che aumenta correndo."], ["Metatarsalgia", "Dolore sotto le teste dei metatarsi, nell'avampiede."], ["Neuroma di Morton", "Formicolio o scossa tra le dita: vedi lo strato Nervi."]],
+    domande: [
+      D("Dove senti il dolore?", [["Sul dorso del piede, in un punto preciso", { stress: 3 }, { pin: [224, 932] }], ["Sotto il piede, nell'avampiede", { metatarsalgia: 3 }, { pin: [226, 944] }], ["Tra due dita, con formicolio", { morton: 3 }, { pin: [229, 946] }]]),
+      D("Hai aumentato da poco chilometri o intensità, o cambiato scarpe?", [["Sì", { stress: 2 }], ["No", { metatarsalgia: 1 }]]),
+      D("Riesci a saltellare su un piede solo senza dolore?", [["Sì", { metatarsalgia: 1 }], ["No, fa male in un punto preciso", { stress: 3 }, { flag: "rosso", note: "Un dolore puntiforme saltellando fa sospettare una frattura da stress: fermati e fatti visitare." }]]),
+      D("Il dorso del piede è gonfio?", [["No", {}], ["Sì", { stress: 2 }]]),
+    ],
+    ipotesi: {
+      stress: ["Sospetta frattura da stress", 3, "Fermati dalla corsa e fatti visitare: nelle prime settimane la radiografia può essere negativa, a volte serve la risonanza."],
+      metatarsalgia: ["Metatarsalgia da sovraccarico", 1, "Scarpe ammortizzate, plantare con scarico metatarsale e rinforzo del polpaccio."],
+      morton: ["Possibile neuroma di Morton", 1, "Guarda il punto «Neuroma di Morton» nello strato Nervi."],
+    },
+    sesso: { f: "Nelle atlete con cicli irregolari, poca energia nella dieta o osteoporosi le fratture da stress sono più frequenti: parlane con il medico." },
+    rimedi: [R.riposo("Stop a corsa e salti finché camminare non è del tutto indolore; bici o nuoto vanno bene."), R.ghiaccio(), R.tutore("Scarpa a suola rigida o scarpa post-operatoria, se te la indica il medico."), R.postura("Ritorno alla corsa graduale: non aumentare il volume più del 10% a settimana.")],
+    esercizi: ["pompa-caviglia", "stretch-polpaccio", "ponte"],
+    medico: ["Dolore puntiforme che aumenta saltellando o correndo.", "Piede gonfio dopo aver aumentato l'allenamento.", "Fratture da stress ripetute.", "Dolore anche a riposo o di notte."],
+  });
+
   const BY_ID = {};
   LIST.forEach((p) => (BY_ID[p.id] = p));
 
   const LAYERS = {
-    muscoli: { label: "Muscoli", color: "#ff7a5c", desc: "Contratture, stiramenti, sovraccarichi" },
-    tendini: { label: "Tendini e legamenti", color: "#cfe0f5", desc: "Tendiniti, distorsioni, fasce" },
-    ossa: { label: "Ossa e articolazioni", color: "#f1e2c2", desc: "Colonna, anca, ginocchio, spalla" },
-    nervi: { label: "Nervi", color: "#f5c542", desc: "Formicolii, sciatica, tunnel carpale" },
-    linfatico: { label: "Sistema linfatico", color: "#46d996", desc: "Linfonodi, gonfiori, drenaggio" },
+    muscoli: { short: "Muscoli", label: "Muscoli", color: "#ff7a5c", desc: "Contratture, stiramenti, sovraccarichi" },
+    tendini: { short: "Tendini", label: "Tendini e legamenti", color: "#cfe0f5", desc: "Tendiniti, distorsioni, fasce" },
+    ossa: { short: "Ossa", label: "Ossa e articolazioni", color: "#f1e2c2", desc: "Colonna, anca, ginocchio, spalla" },
+    nervi: { short: "Nervi", label: "Nervi", color: "#f5c542", desc: "Formicolii, sciatica, tunnel carpale" },
+    linfatico: { short: "Linfatico", label: "Sistema linfatico", color: "#46d996", desc: "Linfonodi, gonfiori, drenaggio" },
   };
 
   const REGIONS = {

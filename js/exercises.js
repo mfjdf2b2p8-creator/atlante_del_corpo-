@@ -509,5 +509,25 @@ window.EXERCISES = (function () {
     avoid: ["Non inclinare il busto all'indietro."],
   });
 
+  /* ---------------- AGGIUNTE ---------------- */
+  X("stretch-tricipite", {
+    name: "Allungamento del tricipite", target: "Tricipite, gran dorsale", level: "Facile", dose: "3 × 30 s per lato",
+    view: "side", hi: ["tricepsA", "lats"], base: Object.assign({}, STAND, { aA: { s: 6, e: 8 }, aB: { s: -4, e: 4 } }),
+    k: [K({ aA: { s: 168, e: 172 } }, 1100, 300, "Porta il braccio dritto in alto"), K({ aA: { s: 172, e: 338 } }, 1400, 2600, "Piega il gomito: la mano scende tra le scapole"), K({ aA: { s: 6, e: 8 } }, 1300, 300, "Rilascia e torna giù")],
+    steps: ["In piedi o seduto, alza un braccio verso il soffitto.", "Piega il gomito portando la mano dietro la testa, verso le scapole.", "Con l'altra mano spingi leggermente il gomito verso il basso e indietro.", "Tieni 30 secondi respirando, poi cambia lato."],
+    tips: ["Tieni la testa dritta: non spingerla in avanti con il braccio."],
+    avoid: ["Non inarcare la zona lombare per andare più in basso."],
+  });
+  X("squeeze-adduttori", {
+    name: "Squeeze degli adduttori con la palla", target: "Adduttori, pube, addominali profondi", level: "Facile", dose: "5 × 5 s, poi 3 × 10",
+    view: "side", hi: ["adductor", "abs"],
+    props: [{ type: "mat", x0: -80, x1: 60 }, { type: "ball", at: "kneeA", off: [-3.5, -3], r: 4.6, front: true }],
+    base: Object.assign({}, SUPINE, { lA: { to: [30, 7], b: 1, f: 0 }, lB: { to: [28, 7], b: 1, f: 0 }, aA: { s: 90, e: 90, wa: 90 }, aB: { s: 91, e: 91, wa: 91 } }),
+    k: [K({}, 900, 400, "Supino, ginocchia piegate, palla (o cuscino) tra le ginocchia"), K({ h: -4 }, 900, 4200, "Stringi forte la palla per 5 secondi, respirando"), K({ h: 0 }, 900, 900, "Rilascia piano")],
+    steps: ["Sdraiato sulla schiena, ginocchia piegate, piedi a terra.", "Metti una palla o un cuscino arrotolato tra le ginocchia.", "Stringi progressivamente fino a una forza di 6–7 su 10 e tieni 5 secondi, senza trattenere il fiato.", "Rilascia piano. Quando non fa più male, passa a 3 serie da 10 strette brevi."],
+    tips: ["È anche un test: se stringere fa male all'inguine, riduci la forza.", "Con i progressi puoi farlo a gambe distese o con il ponte."],
+    avoid: ["Non superare un dolore di 3 su 10 all'inguine.", "Non inarcare la schiena mentre stringi."],
+  });
+
   return E;
 })();

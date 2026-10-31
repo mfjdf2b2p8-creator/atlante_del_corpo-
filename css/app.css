@@ -123,6 +123,16 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 .layer-legend ul { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 2px; }
 .layer-legend li button { background: none; border: 0; padding: 3px 0; color: var(--text); text-align: left; font-size: 13px; }
 .layer-legend li button:hover { color: var(--heading); text-decoration: underline; text-underline-offset: 3px; }
+.l-short { display: none; }
+button, .hot, .chip { touch-action: manipulation; } /* niente zoom della pagina col doppio tocco */
+.stage__hint.gone { opacity: 0; pointer-events: none; }
+.body-holder { touch-action: none; }
+.zoom-ctl { position: absolute; right: 16px; bottom: 18px; display: flex; flex-direction: column; gap: 6px; z-index: 3; transition: opacity .4s; }
+.zoom-ctl button { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: rgba(17, 26, 43, .85); color: var(--heading); font-size: 19px; font-weight: 600; line-height: 1; }
+.zoom-ctl button:hover { border-color: var(--cyan); }
+.zoom-ctl #zReset { display: none; }
+.stage.zoomed .zoom-ctl #zReset { display: grid; }
+.app.focus .zoom-ctl { opacity: 0; pointer-events: none; }
 .back-btn { position: absolute; left: 16px; bottom: 18px; z-index: 3; border: 1px solid var(--line-2); background: rgba(17, 26, 43, .9); border-radius: 999px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; }
 .back-btn:hover { border-color: var(--cyan); }
 
@@ -282,12 +292,17 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 /* ---------------- RESPONSIVE ---------------- */
 @media (max-width: 900px) {
   :root { --top-h: 56px; }
-  .brand__txt { display: none; }
-  .layer-btn { padding: 7px 11px; font-size: 13px; }
-  .layer-btn span { display: none; }
-  .layer-btn.on span { display: inline; }
+  /* barra in alto su due righe: marchio e profilo sopra, i 5 strati sotto, sempre tutti visibili */
+  .topbar { height: auto; flex-wrap: wrap; row-gap: 8px; padding: 8px 12px 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+  .profile-chip { margin-left: auto; }
+  .layers { order: 3; flex: 1 1 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; padding: 0; overflow: visible; }
+  .layer-btn { flex-direction: column; justify-content: center; gap: 4px; padding: 7px 2px 6px; border-radius: 12px; font-size: 11.5px; min-width: 0; }
+  .layer-btn i { width: 8px; height: 8px; }
+  .l-long { display: none; }
+  .l-short { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .layer-legend { display: none; }
-  .layers { justify-content: flex-start; }
+  .zoom-ctl { right: 10px; bottom: 12px; }
+  .zoom-ctl button { width: 40px; height: 40px; }
   .stage__tools { flex-direction: row; left: 10px; top: 8px; gap: 8px; }
   .seg-toggle button { padding: 6px 11px; font-size: 12.5px; }
   .tool-btn { padding: 7px 12px; font-size: 12.5px; }
@@ -314,7 +329,7 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 @media (max-width: 520px) {
   .pc-long { display: none; }
   .pc-short { display: inline; }
-  .brand--btn { display: none; }
+  .stage__hint { max-width: calc(100% - 80px); white-space: normal; text-align: center; }
   .sex-card__fig { height: 34vh; }
   .profile-chip { padding: 6px 10px; font-size: 12px; }
 }

@@ -28,6 +28,11 @@
 .mf { fill: var(--gMus); }
 .me { fill: none; stroke: #5a141b; stroke-width: .7; stroke-opacity: .85; }
 .fib { fill: none; stroke: #ffc2b0; stroke-width: .45; stroke-opacity: .32; }
+.ms { fill: none; stroke: #3b0710; stroke-opacity: .42; pointer-events: none; }
+.mh { fill: none; stroke: #ffd6c6; stroke-opacity: .17; stroke-linecap: round; pointer-events: none; }
+.mt { pointer-events: none; }
+.dc .ms { stroke-opacity: .3; }
+.dc .mh { stroke-opacity: .08; }
 .dc .mf { fill: #9a3a37; }
 .dc .fib { stroke-opacity: .18; }
 .st.deep { opacity: 0; pointer-events: none; }
@@ -51,6 +56,9 @@
 .bf { fill: var(--gBone); stroke: #7d6d52; stroke-width: .6; }
 .bp { fill: #efe3c9; stroke: #7d6d52; stroke-width: .5; }
 .bd { fill: #7fb4d8; opacity: .85; }
+.bsh { fill: #8a7656; opacity: .28; stroke: none; }
+.bcart { fill: #b9c6cf; stroke: #7d8a95; stroke-width: .4; }
+.bdk { fill: #0b1220; opacity: .8; stroke: #7d6d52; stroke-width: .5; }
 .bs { fill: none; stroke: #e9dcc0; stroke-linecap: round; }
 .bsc { fill: none; stroke: #b9c6cf; stroke-linecap: round; opacity: .7; }
 .bsd { fill: none; stroke: #5b4c35; stroke-linecap: round; }
@@ -82,7 +90,9 @@
 .body-svg.focus .st.sel .mf { fill: var(--gMusSel); }
 .body-svg.focus .st.sel .tf, .body-svg.focus .st.sel .bf, .body-svg.focus .st.sel .tb { fill: #ffd29a; stroke: #ff7a2b; }
 .body-svg.focus .st.sel .bd { fill: #ff8a3c; }
-.body-svg.focus .st.sel .bs { stroke: #ffd29a; }
+.body-svg.focus .st.sel .bs, .body-svg.focus .st.sel .bsc { stroke: #ffd29a; opacity: 1; }
+.body-svg.focus .st.sel .ms { stroke: #a8380c; stroke-opacity: .3; }
+.body-svg.focus .st.sel .mh { stroke: #fff4e0; stroke-opacity: .35; }
 .body-svg.focus .st.sel .nv { stroke: #ffef8a; stroke-width: 3.2; }
 .body-svg.focus .st.sel .lv { stroke: #b8ffd9; }
 .body-svg.focus .st.sel.jt { opacity: 1; }

@@ -329,7 +329,7 @@ window.Mannequin = (function () {
   function props(sk, ex, layer) {
     let s = "";
     (ex.props || []).forEach((p) => {
-      const front = p.type === "band" || p.type === "db" || p.type === "strap";
+      const front = p.type === "band" || p.type === "db" || p.type === "strap" || !!p.front;
       if ((layer === "front") !== front) return;
       switch (p.type) {
         case "mat": s += `<rect class="pr-mat" x="${p.x0}" y="-1.6" width="${p.x1 - p.x0}" height="1.6" rx=".8"/>`; break;
@@ -351,7 +351,10 @@ window.Mannequin = (function () {
         case "wall": s += `<rect class="pr-wall" x="${p.x}" y="-210" width="${p.w || 6}" height="210"/>`; break;
         case "wallbg": s += `<rect class="pr-wallbg" x="-60" y="-200" width="120" height="200" rx="2"/>`; break;
         case "post": s += `<rect class="pr-wall" x="${p.x}" y="-210" width="4" height="210"/>`; break;
-        case "ball": s += `<circle class="pr-ball" cx="${p.x}" cy="${-p.y}" r="${p.r}"/>`; break;
+        case "ball": { // posizione fissa (x, y) oppure agganciata a un punto del corpo (at)
+          const c = p.at ? add(propPoint(sk, p.at), p.off || [0, 0]) : [p.x, p.y];
+          s += `<circle class="pr-ball" cx="${X(c)}" cy="${Y(c)}" r="${p.r}"/>`; break;
+        }
         case "band": { const a = propPoint(sk, p.from), b = propPoint(sk, p.to);
           s += `<path class="pr-band" d="M${X(a)},${Y(a)}L${X(b)},${Y(b)}"/><circle class="pr-anchor" cx="${X(b)}" cy="${Y(b)}" r="1.6"/>`; break; }
         case "strap": { const a = propPoint(sk, p.from), b = propPoint(sk, p.to);

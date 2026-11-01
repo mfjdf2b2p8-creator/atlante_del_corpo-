@@ -1,8 +1,8 @@
 /* Stili dell'atlante anatomico SVG */
 .body-svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .body-svg .floor { fill: var(--gGlass); opacity: .5; }
-.body-svg .sil path { fill: var(--gGlass); stroke: rgba(130, 200, 255, .38); stroke-width: 1.1; }
-.body-svg .sil { filter: var(--fRim); }
+.body-svg .sil path { fill: var(--gGlass); stroke: rgba(130, 200, 255, .55); stroke-width: 1.4; }
+.body-svg .sil { filter: none; } /* il bagliore del bordo era un filtro pesante: ora è un contorno semplice */
 .body-svg .sil-light { display: none; }
 .body-svg .L { display: none; }
 
@@ -86,7 +86,7 @@
 
 /* modalità focus: tutto attenuato tranne la selezione */
 .body-svg.focus .L .st:not(.sel), .body-svg.focus .L .dc, .body-svg.focus .tpassive { opacity: .18; }
-.body-svg.focus .L .st.sel { opacity: 1; filter: var(--fGlowBig); animation: pulse 1.8s ease-in-out infinite; }
+.body-svg.focus .L .st.sel { opacity: 1; filter: var(--fGlowBig); }
 .body-svg.focus .st.sel .mf { fill: var(--gMusSel); }
 .body-svg.focus .st.sel .tf, .body-svg.focus .st.sel .bf, .body-svg.focus .st.sel .tb { fill: #ffd29a; stroke: #ff7a2b; }
 .body-svg.focus .st.sel .bd { fill: #ff8a3c; }
@@ -114,3 +114,12 @@
 .body-svg.focus .hot { pointer-events: none; }
 .pin .pc { fill: #ff7a2b; stroke: #fff; stroke-width: 1.2; }
 .pin .pr { fill: none; stroke: #ff7a2b; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: ring 1.6s ease-out infinite; }
+
+/* punto esatto segnato */
+.mark { pointer-events: none; }
+.mark .mk-dot { fill: #ff7a2b; stroke: #fff; stroke-width: 1.6; }
+.mark .mk-ring { fill: none; stroke: #ffb35c; stroke-width: 1.8; }
+.mark .mk-cross { stroke: #fff; stroke-width: 1.8; stroke-linecap: round; opacity: .9; }
+.mark .mk-wave { fill: none; stroke: #ff7a2b; stroke-width: 1.4; transform-box: fill-box; transform-origin: center; animation: ring 1.6s ease-out infinite; }
+.mark { animation: markIn .45s cubic-bezier(.2, 1.6, .4, 1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes markIn { from { opacity: 0; } }

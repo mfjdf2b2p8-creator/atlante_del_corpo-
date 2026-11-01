@@ -167,8 +167,8 @@
     g.innerHTML = pts.map((p) => sidesOf(p).map((side) => {
       const [x, y] = posOf(p, side);
       return `<g class="hot" data-id="${p.id}" data-side="${side}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})" tabindex="0" role="button" aria-label="${esc(p.name)}"><circle class="hh" r="11"/><circle class="hr" r="5"/><circle class="hc" r="3.4"/></g>`;
-    }).join("")).join("") + `<g class="pins"></g>`;
-    highlight(); scaleHots();
+    }).join("")).join("") + `<g class="pins"></g><g class="marks"></g>`;
+    highlight(); scaleHots(); renderMark();
   }
 
   function renderLegend() {
@@ -210,9 +210,9 @@
     tip.classList.remove("on");
     const hot = e.target.closest(".hot");
     if (hot) { focusPoint(hot.dataset.id, hot.dataset.side); return; }
-    if (state.focus) return;
-    const st = e.target.closest(".st");
     const c = svgPoint(e);
+    if (state.focus) { placeMark(c); return; } // nel consulto un tocco segna il punto esatto
+    const st = e.target.closest(".st");
     let p = st ? pointFromStructure(st) : null;
     if (!p) { // il punto caldo più vicino
       let best = null, bd = 70;
@@ -243,26 +243,23 @@
     return [cx - w / 2, cy - h / 2, w, h];
   }
   // ingrandisce (f < 1) o rimpicciolisce (f > 1) attorno al punto px,py del disegno
-  function zoomAt(px, py, f) {
-    const [x, y, w, h] = state.vb;
-    const z = zoomLevel(state.vb);
-    if (z * f >= .995) { if (!state.focus) { setVB(BASE_VB.slice()); return; } f = 1 / z; }
+  function calcZoom(vb, px, py, f) {
+    const [x, y, w, h] = vb;
+    const z = zoomLevel(vb);
+    if (z * f >= .995) { if (!state.focus) return BASE_VB.slice(); f = 1 / z; }
     if (w * f < MIN_W) f = MIN_W / w;
-    setVB(clampPan([px - (px - x) * f, py - (py - y) * f, w * f, h * f]));
+    return clampPan([px - (px - x) * f, py - (py - y) * f, w * f, h * f]);
   }
+  function zoomAt(px, py, f) { setVB(calcZoom(state.vb, px, py, f)); }
   function zoomCenter(f) {
-    cancelAnimationFrame(zoomRaf); hideHint();
-    const [x, y, w, h] = state.vb, from = state.vb.slice(), t0 = performance.now();
-    const step = (now) => {
-      const t = Math.min(1, (now - t0) / 260);
-      setVB(from); zoomAt(x + w / 2, y + h / 2, Math.pow(f, ease(t)));
-      if (t < 1) zoomRaf = requestAnimationFrame(step);
-    };
-    zoomRaf = requestAnimationFrame(step);
+    stopZoom(); hideHint();
+    const [x, y, w, h] = state.vb;
+    zoomTo(() => calcZoom(state.vb, x + w / 2, y + h / 2, f), 360, { burst: false });
   }
   const holder = $("#bodyHolder");
   holder.addEventListener("pointerdown", (e) => {
     if (!svg || e.button > 0) return;
+    stopZoom();
     hideHint();
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 1) { gestMoved = false; gest = { x: e.clientX, y: e.clientY, vb: state.vb.slice() }; }
@@ -277,7 +274,7 @@
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size >= 2 && gest.d) {
       const [a, b] = [...ptrs.values()];
-      cancelAnimationFrame(zoomRaf);
+      stopZoom();
       setVB(gest.vb.slice());
       zoomAt(gest.mid.x, gest.mid.y, gest.d / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)));
     } else if (ptrs.size === 1 && gest.x != null) {
@@ -286,7 +283,7 @@
       if (!state.focus && zoomLevel(gest.vb) > .97) return; // corpo intero: niente da spostare
       gestMoved = true;
       const s = svg.getScreenCTM().a || 1;
-      cancelAnimationFrame(zoomRaf);
+      stopZoom();
       setVB(clampPan([gest.vb[0] - dx / s, gest.vb[1] - dy / s, gest.vb[2], gest.vb[3]]));
     }
   });
@@ -301,7 +298,7 @@
     if (!svg) return;
     e.preventDefault(); hideHint();
     const p = svgPoint(e);
-    cancelAnimationFrame(zoomRaf);
+    stopZoom();
     zoomAt(p.x, p.y, Math.exp(Math.max(-60, Math.min(60, e.deltaY * (e.deltaMode ? 16 : 1))) * .004));
   }, { passive: false });
   $("#zIn").addEventListener("click", () => zoomCenter(.62));
@@ -318,26 +315,54 @@
     clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 8000);
   }
 
-  /* ---- zoom animato ---- */
-  let zoomRaf = 0;
-  function zoomTo(targetFn, dur = 1000) {
+  /* ---- zoom animato ----
+     Invece di ridisegnare il corpo a ogni fotogramma (lento), si anima una
+     trasformazione accelerata dalla scheda grafica e alla fine si fissa la
+     nuova inquadratura: veloce e senza scatti. */
+  let zoomRaf = 0, zoomAnim = null;
+  const reduceMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function stopZoom() {
     cancelAnimationFrame(zoomRaf);
-    const from = state.vb.slice(), t0 = performance.now();
-    const step = (now) => {
-      const t = Math.min(1, (now - t0) / dur), k = ease(t);
-      const to = targetFn();
-      setVB(from.map((v, i) => v + (to[i] - v) * k));
-      if (t < 1) zoomRaf = requestAnimationFrame(step);
-    };
-    zoomRaf = requestAnimationFrame(step);
+    if (zoomAnim) { const z = zoomAnim; zoomAnim = null; z.commit(); }
+  }
+  function zoomTo(targetFn, dur = 620, opts = {}) {
+    stopZoom();
+    if (!svg) return;
+    const to = targetFn();
+    const rect = svg.getBoundingClientRect(), ctm = svg.getScreenCTM();
+    if (reduceMotion() || !svg.animate || !ctm || rect.width < 2) { setVB(to); return; }
+    const k2 = Math.min(rect.width / to[2], rect.height / to[3]), s = k2 / ctm.a;
+    const tc = { x: to[0] + to[2] / 2, y: to[1] + to[3] / 2 };
+    const cur = { x: ctm.a * tc.x + ctm.e - rect.left, y: ctm.d * tc.y + ctm.f - rect.top };
+    const tx = rect.width / 2 - s * cur.x, ty = rect.height / 2 - s * cur.y;
+    if (Math.abs(s - 1) < .01 && Math.hypot(tx, ty) < 1) { setVB(to); return; }
+    const zoomIn = s > 1.05;
+    svg.style.transformOrigin = "0 0"; svg.style.willChange = "transform";
+    const anim = svg.animate([{ transform: "translate(0px,0px) scale(1)" }, { transform: `translate(${tx}px,${ty}px) scale(${s})` }],
+      { duration: dur, easing: zoomIn ? "cubic-bezier(.16,1,.3,1)" : "cubic-bezier(.4,0,.2,1)", fill: "forwards" });
+    if (zoomIn && opts.burst !== false) burst(rect.left + cur.x, rect.top + cur.y, opts.color);
+    const commit = () => { anim.cancel(); svg.style.willChange = ""; setVB(to); opts.done && opts.done(); };
+    zoomAnim = { commit };
+    anim.onfinish = () => { if (zoomAnim && zoomAnim.commit === commit) { zoomAnim = null; commit(); } };
+  }
+  // onda luminosa sul punto verso cui si ingrandisce
+  function burst(x, y, color) {
+    if (reduceMotion()) return;
+    const b = document.createElement("div");
+    b.className = "zoom-burst"; b.style.left = x + "px"; b.style.top = y + "px";
+    if (color) b.style.setProperty("--bc", color);
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 900);
   }
   function focusBox(p, side) {
     const [cx, cy] = posOf(p, side === "c" ? "r" : side, p.central ? [p.at[0], p.at[1]] : null);
     const rect = svg.getBoundingClientRect();
     const ar = rect.width / Math.max(1, rect.height);
+    const both = state.focus && state.focus.both && !p.central;
     let h = p.zoom * 1.3, w = h * ar;
-    if (w < p.zoom * .8) { w = p.zoom * .8; h = w / ar; }
-    const x = p.central ? 200 : cx;
+    const minW = both ? Math.abs(cx - 200) * 2 + p.zoom * .7 : p.zoom * .8;
+    if (w < minW) { w = minW; h = w / ar; }
+    const x = p.central || both ? 200 : cx;
     return [x - w / 2, cy - h / 2, w, h];
   }
 
@@ -349,14 +374,14 @@
     const unscale = (h) => h.getAttribute("transform").replace(/ scale\([^)]*\)/, "");
     $$(".hot", svg).forEach((h) => { h.classList.remove("on"); h.setAttribute("transform", unscale(h)); });
     if (!state.focus) return;
-    const p = BY[state.focus.id], side = state.focus.side;
+    const p = BY[state.focus.id], side = state.focus.side, both = !!state.focus.both;
     const g = svg.querySelector(".L-" + p.layer);
-    const match = (el) => side === "c" || el.dataset.side === "c" || el.dataset.side === side;
+    const match = (el) => both || side === "c" || el.dataset.side === "c" || el.dataset.side === side;
     p.parts.forEach((s) => $$(`[data-s="${s}"]`, g).forEach((el) => match(el) && el.classList.add("sel")));
     (p.peel || []).forEach((s) => $$(`.L-muscoli [data-s="${s}"]`, svg).forEach((el) => match(el) && el.classList.add("peel")));
     const k = (p.zoom / 520).toFixed(2);
     $$(".hot", svg).forEach((h) => {
-      const on = h.dataset.id === p.id && (side === "c" || h.dataset.side === side);
+      const on = h.dataset.id === p.id && (both || side === "c" || h.dataset.side === side);
       h.classList.toggle("on", on);
       if (on) h.setAttribute("transform", unscale(h) + ` scale(${k})`);
     });
@@ -380,14 +405,15 @@
     side = p.central ? "c" : side || "r";
     $("#finder").hidden = true; $("#findBtn").setAttribute("aria-expanded", "false");
     const go = () => {
-      state.focus = { id, side };
+      state.focus = { id, side, both: false, mark: null, mark3d: pendingMark3d };
+      pendingMark3d = null;
       state.quiz = { i: 0, answers: {}, done: false };
       state.result = null;
       appEl.classList.add("focus");
       $("#panel").hidden = false; $("#backBtn").hidden = false;
       renderPanel();
-      highlight(); setPin(null);
-      zoomTo(() => focusBox(p, side), 1100);
+      highlight(); setPin(null); renderMark();
+      zoomTo(() => focusBox(p, side), 640, { color: LAY[p.layer].color });
       try { history.replaceState(null, "", `#punto=${id}${side !== "c" ? "&lato=" + side : ""}`); } catch (e) { /* file:// */ }
     };
     if (p.layer !== state.layer) setLayer(p.layer, true);
@@ -398,11 +424,91 @@
     state.focus = null;
     appEl.classList.remove("focus");
     $("#panel").hidden = true; $("#backBtn").hidden = true;
-    highlight(); setPin(null);
-    if (!silent) zoomTo(() => BASE_VB, 900); else setVB(BASE_VB.slice());
+    highlight(); setPin(null); renderMark();
+    if (!silent) zoomTo(() => BASE_VB, 520); else { stopZoom(); setVB(BASE_VB.slice()); }
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* niente */ }
   }
   $("#backBtn").addEventListener("click", () => closeFocus());
+
+  /* ---- lato scelto: sinistro, destro o entrambi ---- */
+  let pendingMark3d = null; // punto segnato nel 3D, passato al consulto che si apre
+  // lato della persona ("l"/"r") -> lato dello schermo nella vista del punto
+  const screenSide = (p, ps) => (p.view === "f" ? (ps === "l" ? "r" : "l") : (ps === "l" ? "l" : "r"));
+  const personSide = (p, ss) => (ss === "c" ? "c" : p.view === "f" ? (ss === "r" ? "l" : "r") : ss);
+  function setFocusSide(ps) {
+    const F = state.focus, p = BY[F.id];
+    if (!F || p.central) return;
+    F.both = ps === "b";
+    if (!F.both) F.side = screenSide(p, ps);
+    F.mark = null; renderMark();
+    highlight(); setPin(null);
+    zoomTo(() => focusBox(p, F.side), 520, { color: LAY[p.layer].color });
+    $$("#panel .side-pick button").forEach((b) => b.classList.toggle("on", b.dataset.ps === (F.both ? "b" : personSide(p, F.side))));
+    renderMarkInfo();
+    if (state.result) { state.result = evaluate(); renderVerdict(); }
+    try { history.replaceState(null, "", `#punto=${p.id}${F.both ? "" : "&lato=" + F.side}`); } catch (e) { /* niente */ }
+  }
+
+  /* ---- punto esatto segnato sul corpo ---- */
+  function renderMark() {
+    if (!svg) return;
+    const g = svg.querySelector(".marks"); if (!g) return;
+    const F = state.focus;
+    if (!F || !F.mark) { g.innerHTML = ""; return; }
+    const p = BY[F.id], s = (Math.min(F.markZoom || p.zoom, p.zoom) / 300).toFixed(3);
+    g.innerHTML = `<g class="mark" transform="translate(${F.mark.x.toFixed(1)} ${F.mark.y.toFixed(1)}) scale(${s})">
+      <circle class="mk-wave" r="9"/><circle class="mk-ring" r="9"/><path class="mk-cross" d="M-15 0h-6M15 0h6M0 -15v-6M0 15v6"/><circle class="mk-dot" r="3.6"/></g>`;
+  }
+  // descrive dove cade il punto sulla struttura evidenziata e dà un consiglio legato alla posizione
+  function describeMark(p, pt) {
+    const sel = $$(".L-" + p.layer + " .sel", svg);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    sel.forEach((el) => { try { const b = el.getBBox(); if (b.width + b.height < 1) return; x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height); } catch (e) { /* niente */ } });
+    if (x0 > x1) return { txt: "Punto segnato", tip: "" };
+    const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+    const fy = (pt.y - y0) / h, fx = (pt.x - x0) / w;
+    const fuori = fx < -.35 || fx > 1.35 || fy < -.25 || fy > 1.25;
+    const vert = fy < .28 ? "parte alta" : fy > .72 ? "parte bassa" : "parte centrale";
+    // interno/esterno rispetto alla linea centrale del corpo
+    const cx = (x0 + x1) / 2, d0 = Math.abs(cx - 200), d1 = Math.abs(pt.x - 200);
+    const oriz = p.central ? (Math.abs(pt.x - 200) < 6 ? "al centro" : (pt.x > 200) === (p.view === "f") ? "spostato a sinistra" : "spostato a destra")
+      : Math.abs(d1 - d0) < w * .15 ? "al centro" : d1 < d0 ? "verso l'interno" : "verso l'esterno";
+    const end = fy < .2 || fy > .8;
+    const TIP = {
+      muscoli: end ? "Vicino a dove il muscolo diventa tendine: qui si localizzano più spesso tendinopatie e piccoli strappi. Meglio carichi lenti e progressivi che lo stretching forzato."
+        : "Nel ventre del muscolo: più spesso contratture, indolenzimento o stiramenti. Calore, automassaggio leggero e movimento dolce aiutano.",
+      tendini: end ? "Vicino all'attacco sull'osso (inserzione): evita per ora di allungare forte il tendine e di comprimerlo (per esempio inginocchiarti o appoggiarti sopra)."
+        : "Nel corpo del tendine: risponde bene al carico progressivo e lento, mantenendo il dolore sotto 3 su 10 anche il giorno dopo.",
+      nervi: "Lungo un nervo il punto in cui senti il sintomo non è sempre quello in cui il nervo è irritato: se c'è formicolio, guarda anche più in alto (collo o schiena).",
+      ossa: "Su ossa e articolazioni: se il dolore è proprio sulla linea dell'articolazione pensa a cartilagine o menisco; se è sull'osso e fa male premendo dopo tanto carico, va escluso un sovraccarico osseo.",
+      linfatico: "Se senti un linfonodo in quel punto annota quanto è grande e se è morbido o duro. Se dura più di 2–3 settimane, o è duro e non si muove, fallo vedere.",
+    }[p.layer];
+    return fuori ? { txt: "Un po' fuori dalla struttura evidenziata", tip: "Il punto non cade sulla struttura evidenziata: il dolore può venire da una struttura vicina. Prova un altro strato (muscoli, tendini, nervi) o cerca la zona." }
+      : { txt: `${cap1(vert)}, ${oriz}`, tip: TIP };
+  }
+  const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  function placeMark(pt) {
+    const F = state.focus, p = BY[F.id];
+    F.mark = { x: pt.x, y: pt.y, ...describeMark(p, pt) };
+    // zoom ravvicinato sul punto
+    const rect = svg.getBoundingClientRect(), ar = rect.width / Math.max(1, rect.height);
+    const cur = state.vb, h = Math.max(70, Math.min(cur[3], p.zoom * .75)), w = h * ar;
+    F.markZoom = h;
+    renderMark();
+    zoomTo(() => clampPan([pt.x - w / 2, pt.y - h / 2, w, h]), 560, { color: "#ff7a2b" });
+    renderMarkInfo();
+    if (state.result) { state.result = evaluate(); renderVerdict(); }
+  }
+  function renderMarkInfo() {
+    const box = $("#markInfo"); if (!box || !state.focus) return;
+    const F = state.focus, M = F.mark;
+    const m3 = F.mark3d ? `<p class="mk-3d">Segnato nel 3D: <b>${esc(F.mark3d.name)}</b>${F.mark3d.where ? " · " + esc(F.mark3d.where) : ""}</p>` : "";
+    box.innerHTML = M ? `<div class="mark-card on"><span class="mk-ic"></span><div><b>Punto segnato: ${esc(M.txt)}</b>${M.tip ? `<p>${esc(M.tip)}</p>` : ""}${m3}
+        <div class="mk-act"><button class="link-btn" id="mkZoom" type="button">Rivedi il punto</button><button class="link-btn" id="mkClear" type="button">Togli il segno</button></div></div></div>`
+      : `<div class="mark-card"><span class="mk-ic"></span><div><b>Segna il punto esatto</b><p>Tocca sul corpo il punto preciso che fa male: lo ingrandisco, lo segno e lo aggiungo al riepilogo.</p>${m3}</div></div>`;
+    const c = $("#mkClear"); if (c) c.addEventListener("click", () => { F.mark = null; renderMark(); renderMarkInfo(); zoomTo(() => focusBox(BY[F.id], F.side), 520); });
+    const z = $("#mkZoom"); if (z) z.addEventListener("click", () => placeMark({ x: M.x, y: M.y }));
+  }
 
   /* =================== 3. RICERCA =================== */
   const norm = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -433,6 +539,28 @@
   const GEN = [
     { id: "pain", type: "pain", q: "Quanto è forte il fastidio adesso, da 0 a 10?" },
     { id: "durata", q: "Da quanto tempo ce l'hai?", a: [["Da pochi giorni", {}, { v: "acuto" }], ["Da 1 a 6 settimane", {}, { v: "sub" }], ["Da più di 3 mesi", {}, { v: "cronico" }], ["Va e viene da tempo", {}, { v: "ricorrente" }]] },
+    { id: "quando", q: "Quando senti di più il dolore?", a: [
+      ["Sotto sforzo: mentre mi alleno, lavoro o faccio un gesto preciso", {}, { v: "sforzo" }],
+      ["In una posizione ferma: seduto, in piedi, sdraiato…", {}, { v: "statico" }],
+      ["In tutti e due i casi", {}, { v: "entrambi" }],
+      ["Sempre, anche a riposo e senza muovermi", {}, { v: "riposo", flag: "giallo", note: "Un dolore presente sempre, anche a riposo, indica un'irritazione più attiva: merita una valutazione." }]] },
+    { id: "sforzo", multi: true, show: (v) => ["sforzo", "entrambi"].includes(v("quando")), q: "Con quale tipo di sforzo? (puoi sceglierne più di uno)", a: [
+      ["Corsa o camminata veloce", {}, { v: "corsa" }], ["Salti e atterraggi", {}, { v: "salti" }],
+      ["Sollevare pesi o carichi (squat, stacchi, panca)", {}, { v: "pesi" }], ["Braccia sopra la testa o lanci (pallavolo, tennis, nuoto)", {}, { v: "sopra" }],
+      ["Scatti, calci e cambi di direzione", {}, { v: "scatti" }], ["Prese e gesti ripetuti della mano (attrezzi, arrampicata, mouse)", {}, { v: "prese" }],
+      ["Scale, salite o discese", {}, { v: "scale" }], ["Piegarmi o girare il busto", {}, { v: "torsioni" }]] },
+    { id: "fase", show: (v) => ["sforzo", "entrambi"].includes(v("quando")), q: "In che momento dello sforzo compare?", a: [
+      ["All'inizio, poi scaldandomi passa", {}, { v: "inizio" }], ["Cresce durante e mi costringe a fermarmi", {}, { v: "durante" }],
+      ["Dopo: la sera o il giorno seguente", {}, { v: "dopo" }],
+      ["Una fitta improvvisa in un gesto preciso", {}, { v: "fitta", flag: "giallo", note: "Una fitta improvvisa durante un gesto può indicare una piccola lesione: evita quel gesto per qualche giorno." }]] },
+    { id: "statico", multi: true, show: (v) => ["statico", "entrambi"].includes(v("quando")), q: "In quale posizione ferma fa male? (puoi sceglierne più di una)", a: [
+      ["Seduto a lungo (scrivania, auto)", {}, { v: "seduto" }], ["In piedi fermo", {}, { v: "piedi" }],
+      ["Sdraiato o di notte", {}, { v: "notte" }], ["Dormendo su quel lato", {}, { v: "lato" }],
+      ["Piegato in avanti (lavarmi, allacciare le scarpe)", {}, { v: "piegato" }], ["Al computer o guardando il telefono", {}, { v: "computer" }],
+      ["Al risveglio, poi muovendomi migliora", {}, { v: "risveglio" }], ["Con le braccia alzate o appoggiate a lungo", {}, { v: "braccia" }]] },
+    { id: "dominante", show: (v, p) => !p.central && state.focus && !state.focus.both, q: "Il lato che fa male è quello che usi di più?", a: [
+      ["Sì: è la mia mano o gamba dominante, il lato di tiro o di battuta", {}, { v: "dom" }],
+      ["No, è il lato che uso meno", {}, { v: "nondom" }], ["Non saprei, li uso in modo simile", {}, { v: "nd" }]] },
     { id: "trauma", q: "È iniziato con un trauma (caduta, colpo, distorsione)?", a: [["No", {}, { v: "no" }], ["Sì, ma lieve", {}, { v: "lieve" }], ["Sì: gonfiore o livido subito, oppure non riuscivo a caricare", {}, { v: "forte", flag: "rosso", note: "Dopo un trauma importante è meglio escludere fratture o lesioni con una visita." }]] },
     { id: "allarme", multi: true, q: "Hai anche uno di questi segnali?", a: [["Febbre o brividi", {}, { flag: "rosso" }], ["Dolore forte di notte che non cambia con la posizione", {}, { flag: "rosso" }], ["Formicolio o perdita di forza che peggiora", {}, { flag: "rosso" }], ["Calo di peso senza motivo", {}, { flag: "rosso" }], ["Zona gonfia, calda e arrossata", {}, { flag: "rosso" }], ["Nessuno di questi", {}, { none: true }]] },
   ];
@@ -454,7 +582,67 @@
     farmacia: ["#9fe3ff", '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'],
   };
 
-  function questions(p) { return p.domande.map((d, i) => Object.assign({ id: "q" + i }, d)).concat(GEN); }
+  // domande del punto + domande generali (alcune compaiono solo in base alle risposte precedenti)
+  function questions(p) {
+    const A = (state.quiz && state.quiz.answers) || {};
+    const v = (id) => A[id] && A[id].v;
+    return p.domande.map((d, i) => Object.assign({ id: "q" + i }, d)).concat(GEN.filter((q) => !q.show || q.show(v, p)));
+  }
+  // valori scelti in una domanda a scelta multipla
+  const multiVals = (id) => { const a = state.quiz.answers[id], q = GEN.find((x) => x.id === id); return a && a.sel ? a.sel.map((i) => q.a[i][2].v) : []; };
+
+  /* ---- consigli su misura: sforzo, posizione ferma, lato ---- */
+  const ADV_SFORZO = {
+    corsa: ["Corsa", "Per 1–2 settimane riduci i chilometri del 30–50% e togli ripetute e salite; preferisci terreni piani e morbidi. Accorcia un po' il passo aumentando la cadenza e controlla le scarpe (dopo 600–800 km vanno cambiate)."],
+    salti: ["Salti", "Togli per ora salti e pliometria. Rientra con saltelli bassi a due piedi su superficie morbida, poi su un piede, solo quando non fanno male il giorno dopo. Atterra morbido, ginocchio in linea con il piede."],
+    pesi: ["Pesi e carichi", "Abbassa i carichi del 30–40% e lavora lento (3 secondi in discesa) solo nel tratto di movimento che non fa male. Controlla la tecnica: schiena neutra, carico vicino al corpo, niente rimbalzi."],
+    sopra: ["Braccia sopra la testa e lanci", "Limita per ora i gesti sopra la spalla e i lanci. Rinforza i muscoli delle scapole e la rotazione esterna della spalla; nel riscaldamento fai mobilità di spalla e torace."],
+    scatti: ["Scatti e cambi di direzione", "Per ora corri solo in linea retta e a ritmo costante. Reintroduci scatti, calci e cambi di direzione per gradi (prima al 50%, poi al 75%) quando i gesti di prova non fanno male."],
+    prese: ["Prese e gesti ripetuti", "Alterna le prese (più larghe, con ganci o magnesite), fai pause ogni 20–30 minuti e allunga l'avambraccio tra una serie e l'altra. Al lavoro: impugnature più grosse e polso dritto."],
+    scale: ["Scale e discese", "In discesa il carico su ginocchio e caviglia cresce molto: riduci per ora discese e scale ripetute, scendi un gradino alla volta partendo con il lato sano e rinforza quadricipite e glutei."],
+    torsioni: ["Piegarsi e girarsi", "Evita per ora torsioni veloci o sotto carico. Quando ti pieghi usa le anche, come in un inchino, e non la schiena; tieni i pesi vicino al corpo."],
+  };
+  const ADV_FASE = {
+    inizio: "Il dolore che passa scaldandosi è tipico dei tendini: non fermarti del tutto, ma allunga il riscaldamento a 10–15 minuti e tieni il dolore sotto 3 su 10, anche il giorno dopo.",
+    durante: "Se il dolore cresce durante l'attività hai trovato la tua soglia: fermati prima di arrivarci e riparti più leggero. Se cresce sempre, anche a carichi bassi, fatti valutare.",
+    dopo: "Il dolore la sera o il giorno dopo vuol dire che il carico è stato troppo: riducilo del 30% e poi aumentalo di non più del 10% a settimana.",
+    fitta: "Dopo una fitta improvvisa evita per qualche giorno il gesto che l'ha provocata. Se restano dolore, gonfiore o debolezza, fatti vedere.",
+  };
+  const ADV_STATICO = {
+    seduto: ["Seduto a lungo", "Alzati ogni 30–40 minuti per 2 minuti. Sedia con schienale, piedi a terra, ginocchia appena più basse delle anche; in auto avvicina il sedile e appoggia bene la schiena."],
+    piedi: ["In piedi fermo", "Non stare immobile: sposta il peso, fai qualche passo, appoggia un piede su un rialzo alternando i lati. Scarpe comode e ammortizzate aiutano."],
+    notte: ["Di notte", "Se il dolore ti sveglia, cerca una posizione comoda con cuscini di sostegno. Se è forte e non cambia con nessuna posizione, fatti vedere."],
+    lato: ["Dormire su quel lato", "Evita di dormire sul lato che fa male. Sull'altro fianco metti un cuscino tra le ginocchia (anca e ginocchio) oppure abbraccia un cuscino (spalla)."],
+    piegato: ["Piegarsi in avanti", "Quando ti pieghi, piega anche ginocchia e anche e tieni la schiena dritta; per allacciare le scarpe appoggia il piede su un rialzo."],
+    computer: ["Computer e telefono", "Schermo all'altezza degli occhi, avambracci appoggiati, polsi dritti, telefono all'altezza del viso. Ogni 45 minuti fai 2 minuti di movimento di collo e spalle."],
+    risveglio: ["Al risveglio", "La rigidità del mattino che migliora muovendoti risponde bene al movimento: fai gli esercizi dolci appena alzato, dopo una doccia calda. Se dura più di un'ora, parlane con il medico."],
+    braccia: ["Braccia alzate o appoggiate", "Evita di tenere a lungo le braccia sollevate o appoggiate su un bordo duro; fai pause e lascia pendere le braccia rilassate per qualche secondo."],
+  };
+  function advice(p) {
+    const A = state.quiz.answers, v = (id) => A[id] && A[id].v, out = [];
+    multiVals("sforzo").forEach((k) => ADV_SFORZO[k] && out.push({ g: "Sotto sforzo", t: ADV_SFORZO[k][0], d: ADV_SFORZO[k][1] }));
+    if (ADV_FASE[v("fase")]) out.push({ g: "Sotto sforzo", t: "Quando compare", d: ADV_FASE[v("fase")] });
+    const F = state.focus, ps = F.both ? "b" : personSide(p, F.side);
+    const lato = ps === "l" ? "sinistro" : ps === "r" ? "destro" : "";
+    const altro = ps === "l" ? "destro" : "sinistro";
+    multiVals("statico").forEach((k) => {
+      if (!ADV_STATICO[k]) return;
+      let d = ADV_STATICO[k][1];
+      if (k === "lato" && lato) d = `Evita di dormire sul fianco ${lato}: dormi sul ${altro} o sulla schiena. Sul fianco ${altro} metti un cuscino tra le ginocchia (anca e ginocchio) oppure abbraccia un cuscino (spalla).`;
+      out.push({ g: "In posizione", t: ADV_STATICO[k][0], d });
+    });
+    if (!p.central) {
+      if (ps === "b") out.push({ g: "Lato", t: "Su entrambi i lati", d: "Il dolore da tutti e due i lati fa pensare a cause generali: carico di allenamento, postura, scarpe o abitudini. Se le articolazioni sono gonfie e rigide al mattino da entrambi i lati, parlane con il medico." });
+      else {
+        const dom = v("dominante");
+        if (dom === "dom") out.push({ g: "Lato", t: `Lato ${lato}, quello che usi di più`, d: "Il sovraccarico viene spesso dai gesti ripetuti: dove puoi alterna il lato (borsa, mouse, gamba d'appoggio) e riduci per un po' i gesti ripetuti con questo lato." });
+        else if (dom === "nondom") out.push({ g: "Lato", t: `Lato ${lato}, quello che usi meno`, d: "Spesso fa male perché compensa o è più debole: rinforzalo in modo specifico, con esercizi su un lato solo." });
+        out.push({ g: "Lato", t: "Confronta i due lati", d: `Fai gli esercizi prima con il lato sano e poi con il ${lato}: usa il lato sano come riferimento per ampiezza e forza, senza forzare il lato dolente.` });
+      }
+    }
+    if (F.mark && F.mark.tip) out.push({ g: "Punto segnato", t: F.mark.txt, d: F.mark.tip });
+    return out;
+  }
 
   function renderPanel() {
     const p = BY[state.focus.id], side = state.focus.side, l = LAY[p.layer];
@@ -466,7 +654,8 @@
           <div class="p-head__titles">
             <span class="tag" style="--c:${l.color};color:${l.color}"><i></i>${l.label} · ${REG[p.region]}</span>
             <h2>${esc(p.name)}</h2>
-            <div class="p-sub">${esc(p.sub)}${sl ? `<span class="side-pill">${sl}</span>` : ""}</div>
+            <div class="p-sub">${esc(p.sub)}</div>
+            ${p.central ? "" : `<div class="side-pick" role="group" aria-label="Lato che fa male"><span>Lato:</span>${[["l", "Sinistro"], ["r", "Destro"], ["b", "Entrambi"]].map(([k, t]) => `<button type="button" data-ps="${k}" class="${(state.focus.both ? "b" : personSide(p, side)) === k ? "on" : ""}">${t}</button>`).join("")}</div>`}
           </div>
           <button class="icon-btn" id="panelClose" aria-label="Chiudi">×</button>
         </div>
@@ -488,6 +677,7 @@
         </section>
         <section class="p-sec" id="s-quiz">
           <h3><span class="n">3</span>Capiamo meglio il tuo caso</h3>
+          <div id="markInfo"></div>
           <p style="color:var(--muted)">Rispondi a qualche domanda: ti aiuto a capire dove si trova esattamente il problema e cosa fare.</p>
           <div class="quiz" id="quiz"></div>
         </section>
@@ -518,11 +708,13 @@
     $("#copyBtn").addEventListener("click", copySummary);
     $("#printBtn").addEventListener("click", () => window.print());
     $$(".p-steps a").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); $(a.getAttribute("href")).scrollIntoView({ behavior: "smooth", block: "start" }); }));
-    renderQuiz(); renderVerdict();
+    $$("#panel .side-pick button").forEach((b) => b.addEventListener("click", () => setFocusSide(b.dataset.ps)));
+    renderMarkInfo(); renderQuiz(); renderVerdict();
   }
 
   /* ---- questionario ---- */
   function renderQuiz() {
+    if (!state.focus) return;
     const p = BY[state.focus.id], qs = questions(p), Q = state.quiz;
     const box = $("#quiz");
     if (Q.done) {
@@ -617,14 +809,15 @@
     if (pain != null && pain >= 8) { level = Math.max(level, 2); notes.push({ t: "Il dolore è molto forte: riduci l'attività e, se non cala in pochi giorni, fatti vedere.", w: true }); }
     const dur = A.durata && A.durata.v;
     if (dur === "cronico" || dur === "ricorrente") { level = Math.max(level, 2); notes.push({ t: "Il disturbo dura da tempo: una valutazione da un fisioterapista ti aiuta a impostare un percorso mirato.", w: false }); }
-    if (A.allarme && A.allarme.sel.some((i) => GEN[3].a[i][2].flag)) { level = Math.max(level, 3); notes.push({ t: "Hai segnalato almeno un segnale d'allarme: va sempre valutato da un medico.", w: true }); }
+    const allQ = GEN.find((q) => q.id === "allarme");
+    if (A.allarme && A.allarme.sel.some((i) => allQ.a[i][2].flag)) { level = Math.max(level, 3); notes.push({ t: "Hai segnalato almeno un segnale d'allarme: va sempre valutato da un medico.", w: true }); }
     // età e sesso
     if (p.eta && p.eta.over && state.age >= p.eta.over[0]) notes.push({ t: p.eta.over[1], w: false, i: true });
     if (p.eta && p.eta.under && state.age <= p.eta.under[0]) notes.push({ t: p.eta.under[1], w: false, i: true });
     if (p.sesso && p.sesso[state.sex]) notes.push({ t: p.sesso[state.sex], w: false, i: true });
     if (state.age >= 65) notes.push({ t: "Dopo i 65 anni procedi in modo graduale: meglio poco ogni giorno che tanto ogni tanto.", w: false, i: true });
     if (state.age < 16) notes.push({ t: "Sei in crescita: fai gli esercizi con un adulto e parlane con il medico se il dolore dura.", w: false, i: true });
-    return { level, best, hyp, second: second ? p.ipotesi[second] : null, notes, pain, dur };
+    return { level, best, hyp, second: second ? p.ipotesi[second] : null, notes, pain, dur, adv: advice(p) };
   }
 
   function renderVerdict() {
@@ -643,7 +836,8 @@
       ${R.second ? `<p class="alt">Da considerare anche: <b>${esc(R.second[0])}</b></p>` : ""}
       <ol class="todo">${L.todo.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>
       ${R.notes.length ? `<ul class="notes">${R.notes.map((n) => `<li class="${n.i ? "info" : ""}">${esc(n.t)}</li>`).join("")}</ul>` : ""}
-    </div>`;
+    </div>
+    ${R.adv && R.adv.length ? `<h4 style="margin:18px 0 10px">Consigli per il tuo caso</h4><div class="adv">${R.adv.map((a) => `<div class="adv-card" data-g="${esc(a.g)}"><span class="adv-g">${esc(a.g)}</span><b>${esc(a.t)}</b><p>${esc(a.d)}</p></div>`).join("")}</div>` : ""}`;
     lock.innerHTML = R.level >= 3 ? `<div class="locked"><p><b>Prima di fare esercizi su questa zona, fatti vedere da un medico.</b> Gli esercizi qui sotto sono indicativi per dopo la visita.</p></div>` : "";
   }
 
@@ -653,13 +847,24 @@
     const sl = sideLabel(p, state.focus.side);
     const exs = p.esercizi.map((id) => EXERCISES[id]).filter(Boolean).map((e) => e.name);
     const dur = { acuto: "da pochi giorni", sub: "da 1–6 settimane", cronico: "da più di 3 mesi", ricorrente: "va e viene" };
+    const latoTxt = state.focus.both ? "entrambi i lati" : sl ? sl.toLowerCase() : "";
     const lines = [
       `Ciao ${COACH.nome}! Ho fatto il consulto sull'Atlante del corpo.`,
-      `• Zona: ${p.name}${sl ? " (" + sl.toLowerCase() + ")" : ""}`,
+      `• Zona: ${p.name}${latoTxt ? " (" + latoTxt + ")" : ""}`,
       `• Profilo: ${state.sex === "f" ? "donna" : "uomo"}, ${state.age} anni, ${state.height} cm`,
     ];
+    if (state.focus.mark) lines.push(`• Punto preciso: ${state.focus.mark.txt.toLowerCase()}`);
+    if (state.focus.mark3d) lines.push(`• Segnato nel 3D: ${state.focus.mark3d.name}${state.focus.mark3d.where ? ", " + state.focus.mark3d.where : ""}`);
     if (R) {
       if (R.pain != null) lines.push(`• Dolore: ${R.pain}/10${R.dur ? ", " + dur[R.dur] : ""}`);
+      const A = state.quiz.answers, v = (id) => A[id] && A[id].v;
+      const qq = { sforzo: "sotto sforzo", statico: "in posizione ferma", entrambi: "sotto sforzo e in posizione ferma", riposo: "sempre, anche a riposo" }[v("quando")];
+      if (qq) lines.push(`• Quando: ${qq}`);
+      const sf = multiVals("sforzo").map((k) => ADV_SFORZO[k][0].toLowerCase());
+      if (sf.length) lines.push(`• Sforzi che lo provocano: ${sf.join(", ")}${v("fase") ? " (" + { inizio: "all'inizio, poi passa", durante: "cresce durante", dopo: "dopo, la sera o il giorno seguente", fitta: "fitta improvvisa" }[v("fase")] + ")" : ""}`);
+      const st = multiVals("statico").map((k) => ADV_STATICO[k][0].toLowerCase());
+      if (st.length) lines.push(`• Posizioni che fanno male: ${st.join(", ")}`);
+      if (v("dominante")) lines.push(`• Lato: ${{ dom: "quello che usa di più", nondom: "quello che usa meno", nd: "uso simile dei due lati" }[v("dominante")]}`);
       lines.push(`• Esito: ${R.hyp ? R.hyp[0] : "non chiaro"} — ${LEVEL[R.level].t}`);
     }
     lines.push(`• Esercizi suggeriti: ${exs.join(", ")}`);
@@ -888,12 +1093,12 @@
     const screen = p && !p.central ? (info.side === "l" ? (p.view === "f" ? "r" : "l") : (p.view === "f" ? "l" : "r")) : "r";
     card.innerHTML = `<button class="icon-btn v3d-card__x" aria-label="Chiudi">×</button>
       <span class="tag"><i></i>${({ muscoli: "Muscoli", nervi: "Nervi", tendini: "Tendini e legamenti", linfatico: "Sistema linfatico" })[info.kind] || "Ossa e articolazioni"}${lato ? " · " + lato : ""}</span>
-      <h4>${esc(info.it)}</h4><small>${esc(info.en)}</small>
+      <h4>${esc(info.it)}</h4><small>${info.where ? "📍 Punto segnato: " + esc(info.where) : esc(info.en)}</small>
       ${p ? `<p>Legato a: <b>${esc(p.name)}</b> · ${esc(p.sub)}</p><button class="btn btn--small btn--primary" type="button" data-go>Apri il consulto →</button>` : `<p>Per questa struttura non c'è ancora un consulto guidato.</p>`}`;
     card.hidden = false;
     $(".v3d-card__x", card).addEventListener("click", () => { card.hidden = true; v3d && v3d.clear(); });
     const go = $("[data-go]", card);
-    if (go) go.addEventListener("click", () => focusPoint(p.id, screen));
+    if (go) go.addEventListener("click", () => { pendingMark3d = { name: info.it, where: info.where || "" }; focusPoint(p.id, screen); });
   }
 
   // apertura diretta da link condiviso (es. #punto=achille&lato=r) se il profilo è già salvato

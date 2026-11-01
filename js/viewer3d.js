@@ -10,7 +10,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { build as buildStrutture } from "./strutture3d.js?v=2";
+import { build as buildStrutture } from "./strutture3d.js?v=3";
 
 const FILES = { pelle: "assets/3d/pelle.glb?v=1", ossa: "assets/3d/ossa.glb?v=1", muscoli: "assets/3d/muscoli.glb?v=1", tendini: "assets/3d/tendini.glb?v=1", linfa: "assets/3d/linfa.glb?v=1", mappa: "assets/3d/muscoli.json?v=1" };
 let MAP = null; // id del muscolo -> nome italiano, lato, punto dell'atlante
@@ -219,7 +219,34 @@ export function create(container, opts = {}) {
     ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const h = ray.intersectObjects(list, false)[0];
+    lastHit = h ? h.point.clone() : null;
     return h ? h.object.userData.target || h.object : null;
+  }
+  let lastHit = null;
+
+  // segno luminoso sul punto toccato
+  const marker = new THREE.Group();
+  const mkDot = new THREE.Mesh(new THREE.SphereGeometry(.006, 20, 14), new THREE.MeshBasicMaterial({ color: 0xff7a2b, depthTest: false }));
+  const mkRing = new THREE.Mesh(new THREE.RingGeometry(.011, .014, 40), new THREE.MeshBasicMaterial({ color: 0xffd29a, transparent: true, depthTest: false, side: THREE.DoubleSide }));
+  const mkWave = new THREE.Mesh(new THREE.RingGeometry(.012, .0145, 40), new THREE.MeshBasicMaterial({ color: 0xff7a2b, transparent: true, depthTest: false, side: THREE.DoubleSide }));
+  [mkDot, mkRing, mkWave].forEach((m) => { m.renderOrder = 10; marker.add(m); });
+  marker.visible = false; scene.add(marker);
+  let markT = 0;
+
+  // volo della telecamera verso un punto: rapido all'inizio, morbido all'arrivo
+  let fly = null;
+  const easeOutExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
+  function flyTo(p, dist = .75, dur = 750) {
+    const t0 = controls.target.clone(), c0 = camera.position.clone();
+    const dir = c0.clone().sub(t0).normalize();
+    const d = Math.min(c0.distanceTo(t0), dist);
+    fly = { t0, c0, t1: p.clone(), c1: p.clone().add(dir.multiplyScalar(d)), start: performance.now(), dur };
+  }
+  // dove cade il punto sulla struttura: parte alta, centrale o bassa
+  function whereOn(obj, p) {
+    const b = new THREE.Box3().setFromObject(obj);
+    const fy = (p.y - b.min.y) / Math.max(1e-6, b.max.y - b.min.y);
+    return fy > .72 ? "parte alta" : fy < .28 ? "parte bassa" : "parte centrale";
   }
   const paint = () => Object.values(picks).flat().forEach((m) => {
     const base = m.userData.kind === "ossa" && DIM.has(layer) ? boneDim : m.userData.base;
@@ -234,7 +261,10 @@ export function create(container, opts = {}) {
     if (hero || !down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
     const o = hit(e);
     sel = o; paint();
-    if (opts.onPick) opts.onPick(o ? { en: o.userData.en, it: o.userData.it, side: o.userData.side, point: o.userData.point, kind: o.userData.kind } : null);
+    let where = "";
+    if (o && lastHit) { marker.position.copy(lastHit); marker.visible = true; markT = 0; flyTo(lastHit); where = whereOn(o, lastHit); }
+    else marker.visible = false;
+    if (opts.onPick) opts.onPick(o ? { en: o.userData.en, it: o.userData.it, side: o.userData.side, point: o.userData.point, kind: o.userData.kind, where } : null);
   });
 
   // ciclo di disegno
@@ -257,6 +287,18 @@ export function create(container, opts = {}) {
       skin.visible = skinMat.opacity > .01;
       applyLayer();
     }
+    if (fly) {
+      const t = Math.min(1, (performance.now() - fly.start) / fly.dur), k = easeOutExpo(t);
+      controls.target.lerpVectors(fly.t0, fly.t1, k); camera.position.lerpVectors(fly.c0, fly.c1, k);
+      if (t >= 1) fly = null;
+    }
+    if (marker.visible) { // il segno guarda sempre la telecamera e pulsa
+      markT += 1 / 60;
+      marker.quaternion.copy(camera.quaternion);
+      const pop = Math.min(1, markT * 4), s = (.4 + .6 * pop) * (1 + .15 * Math.max(0, 1 - markT * 3));
+      mkDot.scale.setScalar(s); mkRing.scale.setScalar(s);
+      const w = (markT % 1.4) / 1.4; mkWave.scale.setScalar(1 + w * 2.6); mkWave.material.opacity = 1 - w;
+    }
     controls.update();
     renderer.render(scene, camera);
     raf = requestAnimationFrame(frame);
@@ -265,15 +307,15 @@ export function create(container, opts = {}) {
 
   return {
     ready,
-    setLayer(l) { layer = l; if (l === "muscoli") loadMuscles(); applyLayer(); sel = null; hov = null; paint(); },
+    setLayer(l) { layer = l; if (l === "muscoli") loadMuscles(); applyLayer(); sel = null; hov = null; marker.visible = false; paint(); },
     hasMuscles: () => !!groups.muscoli,
     reveal(on) { revealTarget = on ? 1 : 0; },
     view(v) { // f = fronte, b = retro
       const d = camera.position.distanceTo(controls.target);
       camera.position.set(0, controls.target.y + .1, v === "b" ? -d : d); controls.update();
     },
-    reset() { controls.target.set(0, .82, 0); camera.position.set(0, .95, 4.6); sel = null; paint(); },
-    clear() { sel = null; paint(); },
+    reset() { fly = null; marker.visible = false; controls.target.set(0, .82, 0); camera.position.set(0, .95, 4.6); sel = null; paint(); },
+    clear() { sel = null; marker.visible = false; paint(); flyTo(new THREE.Vector3(0, .82, 0), 4.4, 650); },
     destroy() { alive = false; cancelAnimationFrame(raf); ro.disconnect(); controls.dispose(); renderer.dispose(); renderer.domElement.remove(); },
   };
 }

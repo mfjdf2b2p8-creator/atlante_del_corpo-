@@ -874,11 +874,10 @@
   function sync3DLayer() {
     if (v3d) v3d.setLayer(state.layer);
     const note = $("#v3dNote");
-    const msg = state.layer === "ossa" ? "" : state.layer === "muscoli"
-      ? (v3d && !v3d.hasMuscles() ? "Carico i muscoli in 3D…" : "")
-      : `Lo strato «${LAY[state.layer].label}» per ora c'è nelle viste Fronte e Retro. In 3D vedi lo scheletro dentro il corpo.`;
+    const msg = state.layer === "muscoli" && v3d && !v3d.hasMuscles() ? "Carico i muscoli in 3D…"
+      : { nervi: "Nervi principali disegnati sullo scheletro reale: tocca un nervo per il suo nome e il consulto.", tendini: "Tendini e legamenti principali: tocca una struttura per il suo nome e il consulto.", linfatico: "Linfonodi e vasi linfatici principali: tocca un gruppo per il suo nome e il consulto." }[state.layer] || "";
     note.hidden = !msg; note.textContent = msg;
-    if (v3d && state.layer !== "ossa" && state.layer !== "muscoli") v3d.setLayer("ossa");
+    if (msg && state.layer !== "muscoli") { clearTimeout(note._t); note._t = setTimeout(() => (note.hidden = true), 6000); }
   }
   function show3DCard(info) {
     const card = $("#v3dCard");
@@ -888,7 +887,7 @@
     // lato della persona -> lato dello schermo nella vista 2D del punto
     const screen = p && !p.central ? (info.side === "l" ? (p.view === "f" ? "r" : "l") : (p.view === "f" ? "l" : "r")) : "r";
     card.innerHTML = `<button class="icon-btn v3d-card__x" aria-label="Chiudi">×</button>
-      <span class="tag"><i></i>${info.kind === "muscoli" ? "Muscoli" : "Ossa e articolazioni"}${lato ? " · " + lato : ""}</span>
+      <span class="tag"><i></i>${({ muscoli: "Muscoli", nervi: "Nervi", tendini: "Tendini e legamenti", linfatico: "Sistema linfatico" })[info.kind] || "Ossa e articolazioni"}${lato ? " · " + lato : ""}</span>
       <h4>${esc(info.it)}</h4><small>${esc(info.en)}</small>
       ${p ? `<p>Legato a: <b>${esc(p.name)}</b> · ${esc(p.sub)}</p><button class="btn btn--small btn--primary" type="button" data-go>Apri il consulto →</button>` : `<p>Per questa struttura non c'è ancora un consulto guidato.</p>`}`;
     card.hidden = false;

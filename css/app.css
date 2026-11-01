@@ -445,3 +445,4 @@ button, .hot, .chip { touch-action: manipulation; } /* niente zoom della pagina 
   #findBtn span { display: none; }
   #findBtn { padding: 7px 10px; }
 }
+.v3d-card .tag { padding-right: 30px; }

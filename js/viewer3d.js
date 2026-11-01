@@ -10,8 +10,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { build as buildStrutture } from "./strutture3d.js?v=2";
 
-const FILES = { pelle: "assets/3d/pelle.glb?v=1", ossa: "assets/3d/ossa.glb?v=1", muscoli: "assets/3d/muscoli.glb?v=1", mappa: "assets/3d/muscoli.json?v=1" };
+const FILES = { pelle: "assets/3d/pelle.glb?v=1", ossa: "assets/3d/ossa.glb?v=1", muscoli: "assets/3d/muscoli.glb?v=1", tendini: "assets/3d/tendini.glb?v=1", linfa: "assets/3d/linfa.glb?v=1", mappa: "assets/3d/muscoli.json?v=1" };
 let MAP = null; // id del muscolo -> nome italiano, lato, punto dell'atlante
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const cache = {};
@@ -116,9 +117,26 @@ export function create(container, opts = {}) {
   const muscleSel = new THREE.MeshStandardMaterial({ color: 0xffa04a, emissive: 0xff5a1f, emissiveIntensity: .5, roughness: .45 });
   const muscleHov = new THREE.MeshStandardMaterial({ color: 0xe0624e, emissive: 0x6cc6ff, emissiveIntensity: .18, roughness: .5 });
 
+  // strati costruiti: nervi gialli luminosi, tendini bianchi, linfatico verde
+  const glow = (c, e, k) => new THREE.MeshStandardMaterial({ color: c, emissive: e, emissiveIntensity: k, roughness: .4, metalness: 0 });
+  const SMATS = {
+    nervi: { base: glow(0xffd84a, 0xf2b100, .55), sel: glow(0xffa04a, 0xff5a1f, .8), hov: glow(0xfff2a0, 0xffd000, .9) },
+    tendini: { base: new THREE.MeshPhysicalMaterial({ color: 0xeef3fa, roughness: .35, sheen: .4, sheenColor: new THREE.Color(0xbfd6ff), emissive: 0x8fa6c4, emissiveIntensity: .12 }), sel: selMat, hov: hovMat },
+    linfatico: { base: glow(0x56e6a4, 0x14a865, .5), sel: glow(0xffa04a, 0xff5a1f, .8), hov: glow(0xb8ffd9, 0x2bd88a, .9) },
+  };
+  // ossa attenuate quando si guardano nervi, tendini o linfatico
+  const boneDim = new THREE.MeshStandardMaterial({ color: 0x9aa8bb, roughness: .7, transparent: true, opacity: .42 });
+  const DIM = new Set(["nervi", "tendini", "linfatico"]);
+  const MODEL_NAMES = { // parti vere del modello per tendini e linfatico
+    FJ1405: ["Tendine d'Achille", "achille"], FJ1423: ["Bandelletta ileotibiale", "bandelletta"], FJ1424: ["Legamento plantare lungo", "fascia-plantare"],
+    FJ1448: ["Linea alba", "addominali"], FJ1471: ["Retinacolo dei flessori (tunnel carpale)", "tunnel-carpale"],
+    FJ2561: ["Milza", null], FJ3150: ["Timo", null], FJ3151: ["Timo", null],
+  };
+
   const groups = {};
   let skin = null, reveal = hero || opts.start === "pelle" ? 0 : 1, revealTarget = reveal, layer = opts.layer || "ossa";
-  const picks = { ossa: [], muscoli: [] };
+  const picks = { ossa: [], muscoli: [], nervi: [], tendini: [], linfatico: [] };
+  const rayList = { nervi: [], tendini: [], linfatico: [] }; // dove si tocca (zone più larghe delle strutture sottili)
   // prepara un gruppo di parti cliccabili (ossa o muscoli)
   function addGroup(key, src, info) {
     const g = src.clone(true);
@@ -139,10 +157,34 @@ export function create(container, opts = {}) {
     skin.traverse((o) => { if (o.isMesh) { o.material = skinMat; o.renderOrder = 2; } });
     scene.add(skin); groups.pelle = skin;
     if (os) addGroup("ossa", os, (en) => ({ base: /cartilage|disk|meniscus/i.test(en) ? cartMat : boneMat, it: italiano(en), point: linkFor(en), sel: selMat, hov: hovMat }));
+    if (os) buildStructures();
     applyLayer();
     opts.onReady && opts.onReady();
     if (!hero) loadMuscles(); // i muscoli arrivano dopo, senza bloccare
   }).catch((e) => { opts.onError && opts.onError(e); });
+
+  // nervi, tendini e linfatico: costruiti sulle ossa + le poche parti vere del modello
+  function buildStructures() {
+    const byName = (n) => picks.ossa.find((m) => m.userData.en.toLowerCase() === n.toLowerCase());
+    scene.updateMatrixWorld(true);
+    const { groups: sg, items, proxies } = buildStrutture(byName, SMATS);
+    Object.keys(sg).forEach((k) => { scene.add(sg[k]); groups[k] = sg[k]; picks[k].push(...items[k]); rayList[k].push(...proxies[k]); });
+    const extra = (key, file) => load(file).then((src) => {
+      if (!alive) return;
+      const copy = src.clone(true); copy.updateMatrixWorld(true);
+      copy.traverse((o) => {
+        if (!o.isMesh) return;
+        const id = (o.name || "").replace(/M$/, ""), info = MODEL_NAMES[id] || [cap(o.userData.name || ""), null];
+        const side = o.userData.side || (/M$/.test(o.name) ? "l" : "r");
+        const m = o.clone(); o.matrixWorld.decompose(m.position, m.quaternion, m.scale);
+        Object.assign(m.userData, { kind: key, it: info[0], point: info[1], side: /linea alba|milza/i.test(info[0]) ? "c" : side, en: o.userData.name || "", base: SMATS[key].base, sel: SMATS[key].sel, hov: SMATS[key].hov });
+        m.material = m.userData.base;
+        groups[key].add(m); picks[key].push(m); rayList[key].push(m);
+      });
+      applyLayer();
+    }).catch(() => { /* facoltativo */ });
+    extra("tendini", "tendini"); extra("linfatico", "linfa");
+  }
 
   let musclesLoading = null;
   function loadMuscles() {
@@ -161,10 +203,11 @@ export function create(container, opts = {}) {
   function applyLayer() {
     const shown = reveal > .02;
     // le ossa restano sotto i muscoli per riempire le zone senza muscoli
-    if (groups.ossa) groups.ossa.visible = shown && (layer === "ossa" || layer === "muscoli");
+    if (groups.ossa) groups.ossa.visible = shown && layer !== "pelle";
     if (groups.muscoli) groups.muscoli.visible = shown && layer === "muscoli";
+    DIM.forEach((k) => { if (groups[k]) groups[k].visible = shown && layer === k; });
   }
-  const active = () => (layer === "muscoli" && groups.muscoli ? picks.muscoli : layer === "ossa" ? picks.ossa : []);
+  const active = () => rayList[layer] || (picks[layer] && (layer !== "muscoli" || groups.muscoli) ? picks[layer] : []);
 
   // selezione e passaggio del mouse
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -176,9 +219,12 @@ export function create(container, opts = {}) {
     ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const h = ray.intersectObjects(list, false)[0];
-    return h ? h.object : null;
+    return h ? h.object.userData.target || h.object : null;
   }
-  const paint = () => [...picks.ossa, ...picks.muscoli].forEach((m) => (m.material = m === sel ? m.userData.sel : m === hov ? m.userData.hov : m.userData.base));
+  const paint = () => Object.values(picks).flat().forEach((m) => {
+    const base = m.userData.kind === "ossa" && DIM.has(layer) ? boneDim : m.userData.base;
+    m.material = m === sel ? m.userData.sel : m === hov ? m.userData.hov : base;
+  });
   renderer.domElement.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; controls.autoRotate = false; });
   renderer.domElement.addEventListener("pointermove", (e) => {
     if (hero || e.pointerType === "touch") return;

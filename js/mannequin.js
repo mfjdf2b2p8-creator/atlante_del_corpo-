@@ -209,13 +209,13 @@ window.Mannequin = (function () {
   }
 
   // forme di evidenziazione dei muscoli al lavoro
-  function hiShapes(name, sk, pulse) {
+  function hiShapes(name, sk, pulse, cls = "hl") {
     const out = [];
     const side = sk.view === "side";
     const m = name.match(/^([a-zA-Z]+?)(A|B)?$/);
     const base = m[1], which = m[2] ? [m[2]] : ["A", "B"];
-    const cap = (a, b, r) => out.push(capsule(a, b, r, r * .85, "hl", `opacity="${pulse}"`));
-    const circ = (c, r) => out.push(`<circle class="hl" opacity="${pulse}" cx="${X(c)}" cy="${Y(c)}" r="${r}"/>`);
+    const cap = (a, b, r) => out.push(capsule(a, b, r, r * .85, cls, `opacity="${pulse}"`));
+    const circ = (c, r) => out.push(`<circle class="${cls}" opacity="${pulse}" cx="${X(c)}" cy="${Y(c)}" r="${r}"/>`);
     const along = (p, q, t0, t1, off, frontSign) => {
       const v = [q[0] - p[0], q[1] - p[1]];
       const len = Math.hypot(v[0], v[1]) || 1;
@@ -273,7 +273,9 @@ window.Mannequin = (function () {
     const side = sk.view === "side";
     const fe = sk.sex === "f";
     const hi = ex.hi || [];
-    const hiFor = (filter) => hi.filter(filter).map((h) => hiShapes(h, sk, pulse)).join("");
+    // una voce può avere uno stato dopo i due punti: "quadA:c" contrazione, ":e" frenata in allungamento, ":s" allungamento
+    const hiFor = (filter) => hi.map((h) => { const [n, st] = h.split(":"); return { n, cls: st ? "hl hl-" + st : "hl" }; })
+      .filter((o) => filter(o.n)).map((o) => hiShapes(o.n, sk, pulse, o.cls)).join("");
     const limbHi = (X) => hiFor((h) => /(A|B)$/.test(h) ? h.endsWith(X) && !/^(abs|obl|lumbar|chest|upperback|lats|neck|trap)/.test(h) : !/^(abs|obl|lumbar|chest|upperback|lats|neck|trap)/.test(h) && X === "A");
     const r = fe ? .92 : 1;
     const leg = (Xs, cls) => {
@@ -501,5 +503,5 @@ window.Mannequin = (function () {
       ${props(sk, ex, "back")}<g>${figure(sk, ex, .8)}</g>${props(sk, ex, "front")}</svg>`;
   }
 
-  return { create, still, solve };
+  return { create, still, solve, figure, defs, prepareExercise, interp };
 })();

@@ -348,3 +348,100 @@ button, .hot, .chip { touch-action: manipulation; } /* niente zoom della pagina 
   .info-card, .prob, .remedy, .verdict, .doctor, .ex-card { background: #fff !important; border-color: #ccc !important; color: #111; }
   p, span, li, small { color: #222 !important; }
 }
+
+/* ---------------- SPORT: MUSCOLI IN AZIONE ---------------- */
+.sport-bg { position: fixed; left: 0; right: 0; bottom: 0; height: 34vh; z-index: -1; overflow: hidden; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(88, 208, 255, .05) 70%, rgba(88, 208, 255, .09)); }
+.sport-bg::after { content: ""; position: absolute; left: 0; right: 0; bottom: 3vh; height: 1px; background: linear-gradient(90deg, transparent, rgba(160, 200, 255, .25), transparent); }
+.sport-lane { position: absolute; left: 0; bottom: 3vh; height: calc(var(--s) * 30vh); aspect-ratio: 124 / 204; padding: 0; border: 0; background: none; opacity: 0; pointer-events: auto; cursor: pointer;
+  animation: lane var(--dur) linear var(--delay) infinite; will-change: transform, opacity; }
+.sport-lane:nth-child(2) { bottom: 6vh; filter: blur(1.2px); }
+.sport-lane:nth-child(3) { bottom: 4.5vh; filter: blur(.5px); }
+.sport-lane:hover .sport-fig, .sport-lane:focus-visible .sport-fig { filter: drop-shadow(0 0 14px rgba(255, 140, 80, .8)); }
+.sport-fig { display: block; width: 100%; height: 100%; transition: filter .3s; }
+@keyframes lane { 0% { transform: translateX(-30vw); opacity: 0; } 14% { opacity: var(--op); } 80% { opacity: var(--op); } 100% { transform: translateX(110vw); opacity: 0; } }
+.sport-cta { margin: 22px auto 0; display: inline-flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 16px; text-align: left;
+  border: 1px solid rgba(255, 122, 77, .45); background: linear-gradient(135deg, rgba(255, 122, 77, .18), rgba(88, 208, 255, .08)); color: var(--heading); transition: transform .2s, border-color .2s; }
+.sport-cta:hover { transform: translateY(-1px); border-color: var(--accent); }
+.sport-cta svg { color: var(--accent-2); flex: none; }
+.sport-cta b { display: block; font-size: 15px; }
+.sport-cta small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.sport-cta i { font-style: normal; color: var(--accent-2); font-size: 18px; }
+
+.sport-stage { position: relative; display: flex; flex-direction: column; min-height: min(72vh, 660px); background: radial-gradient(80% 70% at 50% 40%, #16263f, #0a1220); }
+.sport-anim { position: relative; flex: 1; min-height: 300px; }
+.sport-cam { position: absolute; left: 14px; top: 14px; z-index: 2; }
+.sport-legend { position: absolute; left: 14px; bottom: 74px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; color: var(--text); z-index: 2; }
+.sport-legend span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: rgba(10, 17, 30, .7); }
+.sport-legend i { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.sport-bar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); background: rgba(8, 13, 22, .6); }
+.sport-phases { flex: 1; display: flex; gap: 5px; justify-content: center; }
+.sport-phases button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 600; transition: background .2s, color .2s; }
+.sport-phases button.on { background: var(--accent); border-color: var(--accent); color: #1d0b03; }
+.sport-speed button { padding: 6px 10px; }
+.mq-svg .track-mark { fill: rgba(160, 200, 255, .22); }
+.mq-svg .hl.hl-c, .mq-svg .hl.hl-e, .mq-svg .hl.hl-s { mix-blend-mode: normal; fill-opacity: .88; stroke: rgba(255, 255, 255, .5); stroke-width: .4; }
+.mq-svg .hl.hl-c { fill: #ff5a3c; }
+.mq-svg .hl.hl-e { fill: #ffb23f; }
+.mq-svg .hl.hl-s { fill: #46b6ff; }
+.sport-desc { color: var(--text); margin: 6px 0 14px; }
+.mus-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mus-card { text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); border-left: 3px solid var(--mc); background: var(--surface); transition: border-color .2s, background .2s; }
+.mus-card:hover, .mus-card.on { background: var(--surface-2); border-color: var(--mc); }
+.mus-card b { display: block; color: var(--heading); font-size: 14px; margin: 3px 0 2px; }
+.mus-card small { color: var(--muted); font-size: 12px; }
+.mus-state { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--mc); }
+.mus-state i { width: 8px; height: 8px; border-radius: 50%; background: var(--mc); box-shadow: 0 0 8px var(--mc); }
+.mus-detail { margin-top: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--mc); background: rgba(17, 26, 43, .7); animation: rise .3s var(--ease) both; }
+.mus-detail h4 { font-size: 16px; margin: 0 0 6px; }
+.mus-detail p { margin: 0 0 8px; font-size: 14px; }
+.sport-hint { color: var(--muted); font-size: 13px; margin: 12px 0 0; }
+.sport-intro { color: var(--muted); font-size: 12.5px; margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+@media (max-width: 900px) {
+  .sport-stage { min-height: 0; }
+  .sport-anim { height: 44vh; flex: none; }
+  .sport-cam { left: 8px; top: 8px; right: 50px; }
+  .sport-cam button { padding: 6px 9px; font-size: 12px; }
+  .sport-legend { bottom: auto; top: calc(44vh - 34px); left: 8px; font-size: 11.5px; }
+  .sport-bar { flex-wrap: wrap; justify-content: center; }
+  .sport-phases { flex: 1 1 100%; order: -1; }
+  .sport-phases button { width: 28px; height: 28px; }
+  .mus-list { grid-template-columns: 1fr 1fr; }
+  .sport-lane { height: calc(var(--s) * 22vh); }
+  .sport-bg { height: 26vh; }
+}
+@media (max-width: 520px) { .sport-cta { padding: 10px 14px; } .sport-cta small { font-size: 12px; } }
+
+/* ---------------- CORPO IN 3D ---------------- */
+.hero3d { width: min(900px, 100%); margin-top: 18px; display: flex; flex-direction: column; align-items: center; animation: rise .6s var(--ease) both; }
+.hero3d__stage { position: relative; width: min(420px, 100%); height: min(52vh, 520px); border-radius: 28px;
+  background: radial-gradient(60% 55% at 50% 45%, rgba(255, 160, 120, .14), transparent 70%), radial-gradient(40% 30% at 50% 92%, rgba(88, 208, 255, .12), transparent 70%); }
+.hero3d__hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; text-align: center; }
+.credit { color: var(--muted); font-size: 11px; opacity: .75; margin: 4px 0 0; text-align: center; }
+.credit a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.v3d-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; touch-action: none; cursor: grab; }
+.v3d-canvas:active { cursor: grabbing; }
+.v3d-loading { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; padding: 20px; text-align: center; color: var(--muted); font-size: 14px; }
+.ready > .v3d-loading { display: none; }
+.v3d-holder { position: absolute; inset: 14px 0 10px; }
+.stage.is3d .body-holder, .stage.is3d .layer-legend, .stage.is3d .stage__hint, .stage.is3d .zoom-ctl, .stage.is3d .back-btn { display: none !important; }
+.v3d-btn { position: relative; }
+.v3d-note { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); width: min(520px, calc(100% - 32px)); padding: 10px 14px; border-radius: 14px; background: rgba(17, 26, 43, .88); border: 1px solid var(--line-2); font-size: 13px; color: var(--text); text-align: center; z-index: 3; }
+.v3d-credit { position: absolute; left: 0; right: 0; bottom: 10px; z-index: 2; }
+.v3d-card { position: absolute; right: 16px; top: 16px; width: min(320px, calc(100% - 32px)); padding: 16px 18px; border-radius: 18px; background: rgba(13, 20, 34, .95); border: 1px solid var(--line-2); box-shadow: 0 20px 50px -20px #000; z-index: 4; animation: rise .3s var(--ease) both; }
+.v3d-card h4 { font-size: 18px; margin: 8px 0 2px; padding-right: 26px; }
+.v3d-card small { color: var(--muted); font-size: 12px; }
+.v3d-card p { font-size: 14px; margin: 10px 0; }
+.v3d-card__x { position: absolute; right: 10px; top: 10px; }
+@media (max-width: 900px) {
+  .hero3d__stage { height: 44vh; }
+  .v3d-holder { inset: 54px 0 30px; }
+  .v3d-card { left: 10px; right: 10px; top: auto; bottom: 34px; width: auto; }
+  .v3d-note { bottom: 32px; font-size: 12px; }
+}
+.tool-btn { white-space: nowrap; }
+@media (max-width: 520px) {
+  .stage__tools { gap: 6px; }
+  #findBtn span { display: none; }
+  #findBtn { padding: 7px 10px; }
+}

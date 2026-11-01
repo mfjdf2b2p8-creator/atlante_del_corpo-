@@ -10,20 +10,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/anatomy.css?v=7">
-  <link rel="stylesheet" href="css/mannequin.css?v=7">
-  <link rel="stylesheet" href="css/app.css?v=7">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+  <link rel="stylesheet" href="css/anatomy.css?v=9">
+  <link rel="stylesheet" href="css/mannequin.css?v=9">
+  <link rel="stylesheet" href="css/app.css?v=9">
 </head>
 <body>
 
 <!-- ============ 1. SCELTA PROFILO ============ -->
 <section class="setup" id="setup" aria-label="Il tuo profilo">
   <div class="setup__bg" aria-hidden="true"></div>
+  <div class="sport-bg" id="sportBg"></div>
   <header class="setup__head">
     <span class="brand"><span class="brand__dot"></span>Atlante del corpo</span>
     <h1>Dove ti fa male?<br><span class="grad">Scoprilo strato per strato.</span></h1>
     <p class="lead">Scegli il tuo corpo, esplora muscoli, ossa, tendini, nervi e sistema linfatico, tocca il punto che ti dà fastidio: ti guido con domande, rimedi ed esercizi animati.</p>
+    <button class="sport-cta" id="sportCta" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="15" cy="4.5" r="2" fill="currentColor"/><path d="M8 21l3-6 3 2v5M6 11l3-3h4l2 3 3 1M11 15l1-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Muscoli in azione: la corsa</b><small>Guarda al rallentatore cosa si contrae e cosa si allunga</small></span><i aria-hidden="true">→</i></button>
   </header>
+
+  <div class="hero3d" id="hero3d" aria-label="Corpo umano in 3D">
+    <div class="hero3d__stage" id="hero3dStage"><p class="v3d-loading">Carico il corpo in 3D…</p></div>
+    <p class="hero3d__hint">Trascinalo per girarlo · dopo la scelta si apre strato per strato</p>
+    <p class="credit">Modello 3D: <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/" target="_blank" rel="noopener">BodyParts3D</a>, © The Database Center for Life Science, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · semplificato per il web</p>
+  </div>
 
   <div class="setup__step" id="stepSex">
     <p class="step-label"><b>1</b> Scegli il corpo</p>
@@ -78,12 +87,18 @@
     <section class="stage" id="stage" aria-label="Corpo umano">
       <div class="stage__glow" aria-hidden="true"></div>
       <div class="body-holder" id="bodyHolder"></div>
+      <div class="v3d-holder" id="v3dHolder" hidden><p class="v3d-loading">Carico il corpo in 3D…</p></div>
+      <div class="v3d-note" id="v3dNote" hidden></div>
+      <div class="v3d-card" id="v3dCard" hidden></div>
+      <p class="credit v3d-credit" id="v3dCredit" hidden>Modello 3D: <a href="https://dbarchive.biosciencedbc.jp/en/bodyparts3d/" target="_blank" rel="noopener">BodyParts3D</a>, © The Database Center for Life Science, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · semplificato per il web</p>
       <div class="stage__tools">
         <div class="seg-toggle" role="group" aria-label="Vista">
           <button data-view="f" class="on">Fronte</button>
           <button data-view="b">Retro</button>
+          <button data-view="3d" class="v3d-btn">3D</button>
         </div>
-        <button class="tool-btn" id="findBtn" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Cerca una zona</span></button>
+        <button class="tool-btn" id="findBtn" aria-expanded="false" aria-label="Cerca una zona"><svg viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Cerca una zona</span></button>
+        <button class="tool-btn" id="sportBtn" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="15" cy="4.5" r="2" fill="currentColor"/><path d="M8 21l3-6 3 2v5M6 11l3-3h4l2 3 3 1M11 15l1-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Corsa</span></button>
       </div>
       <div class="stage__hint" id="stageHint">Tocca un <span class="dot"></span> punto luminoso o direttamente una struttura</div>
       <div class="layer-legend" id="layerLegend"></div>
@@ -109,6 +124,28 @@
   <div class="tooltip" id="tooltip" role="tooltip"></div>
 </div>
 
+<!-- ============ 2b. SPORT ============ -->
+<div class="modal sport-modal" id="sportModal" hidden role="dialog" aria-modal="true" aria-labelledby="sportTitle">
+  <div class="modal__box sport-box">
+    <button class="icon-btn modal__close" id="sportClose" aria-label="Chiudi">×</button>
+    <div class="sport-stage">
+      <div class="sport-anim" id="sportAnim"></div>
+      <div class="sport-cam seg-toggle" role="group" aria-label="Inquadratura">
+        <button data-cam="corpo">Corpo intero</button><button data-cam="gamba" class="on">Zoom gamba</button><button data-cam="piede">Polpaccio e piede</button>
+      </div>
+      <div class="sport-legend" id="sportLegend"></div>
+      <div class="sport-bar">
+        <button class="ctrl ctrl--main" id="sportPlay" aria-label="Pausa">❚❚</button>
+        <div class="sport-phases" id="sportPhases" role="group" aria-label="Fasi del passo"></div>
+        <div class="speed sport-speed" role="group" aria-label="Modalità">
+          <button data-smode="step" class="on" title="Si ferma su ogni fase">Fasi</button><button data-smode="slow" title="Rallentatore continuo">Lento</button><button data-smode="real" title="Velocità reale">Reale</button>
+        </div>
+      </div>
+    </div>
+    <div class="ex-info sport-info" id="sportInfo"></div>
+  </div>
+</div>
+
 <!-- ============ 3. ESERCIZIO ============ -->
 <div class="modal" id="exModal" hidden role="dialog" aria-modal="true" aria-labelledby="exTitle">
   <div class="modal__box">
@@ -130,11 +167,13 @@
   </div>
 </div>
 
-<script src="js/geo.js?v=7"></script>
-<script src="js/anatomy.js?v=7"></script>
-<script src="js/points.js?v=7"></script>
-<script src="js/mannequin.js?v=7"></script>
-<script src="js/exercises.js?v=7"></script>
-<script src="js/app.js?v=7"></script>
+<script src="js/geo.js?v=9"></script>
+<script src="js/anatomy.js?v=9"></script>
+<script src="js/points.js?v=9"></script>
+<script src="js/mannequin.js?v=9"></script>
+<script src="js/exercises.js?v=9"></script>
+<script src="js/sport.js?v=9"></script>
+<script src="js/app.js?v=9"></script>
+<script type="module" src="js/viewer3d.js?v=9"></script>
 </body>
 </html>

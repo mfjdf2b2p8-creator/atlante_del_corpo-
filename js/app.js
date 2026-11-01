@@ -64,13 +64,15 @@
   $("#age").addEventListener("input", (e) => { state.age = +e.target.value; updateMeasures(); });
   $("#height").addEventListener("input", (e) => { state.height = +e.target.value; updateMeasures(); });
   $("#backSex").addEventListener("click", () => { $("#stepMeasures").hidden = true; $("#stepSex").scrollIntoView({ behavior: "smooth" }); });
-  $("#startBtn").addEventListener("click", startApp);
+  // dopo la scelta del corpo si entra nel 3D: prima la pelle, poi gli strati
+  $("#startBtn").addEventListener("click", () => { startApp(); enter3D(true); });
   $("#age").value = state.age; $("#height").value = state.height;
   if (state.sex) chooseSex(state.sex);
 
   function startApp() {
     store.set("profilo", { sex: state.sex, age: state.age, height: state.height });
     setupEl.hidden = true; appEl.hidden = false;
+    stopSportBg(); stopHero3D();
     renderProfile(); buildLayerNav(); renderBody(); showHint();
     const h = new URLSearchParams(location.hash.slice(1));
     if (h.get("punto") && BY[h.get("punto")]) setTimeout(() => focusPoint(h.get("punto"), h.get("lato") || "r"), 250);
@@ -79,6 +81,7 @@
     closeFocus(true);
     appEl.hidden = true; setupEl.hidden = false;
     if (state.sex) chooseSex(state.sex);
+    leave3D(); startSportBg(); startHero3D();
   }
   $("#homeBtn").addEventListener("click", showSetup);
   $("#profileChip").addEventListener("click", showSetup);
@@ -98,6 +101,7 @@
     state.layer = layer;
     $$("#layers .layer-btn").forEach((b) => b.classList.toggle("on", b.dataset.layer === layer));
     if (svg) svg.setAttribute("data-layer", layer);
+    if (mode3d) sync3DLayer();
     const on = $("#layers .layer-btn.on"); if (on && on.scrollIntoView) on.scrollIntoView({ inline: "nearest", block: "nearest" });
     renderHots(); renderLegend();
   }
@@ -107,8 +111,9 @@
     svg.setAttribute("data-layer", state.layer);
     setVB(state.vb);
     renderHots(); renderLegend(); highlight();
-    $$(".seg-toggle button").forEach((b) => b.classList.toggle("on", b.dataset.view === state.view));
+    syncViewBtns();
   }
+  function syncViewBtns() { $$("[data-view]").forEach((b) => b.classList.toggle("on", mode3d ? b.dataset.view === "3d" : b.dataset.view === state.view)); }
   function setVB(vb) {
     state.vb = vb;
     if (!svg) return;
@@ -136,7 +141,11 @@
       requestAnimationFrame(() => requestAnimationFrame(() => { holder.classList.remove("flip-in"); then && then(); }));
     }, 380);
   }
-  $$(".seg-toggle button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+  $$("[data-view]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.view === "3d") { enter3D(); return; }
+    if (mode3d) leave3D();
+    setView(b.dataset.view); syncViewBtns();
+  }));
 
   const sidesOf = (p) => (p.central ? ["c"] : ["r", "l"]);
   function posOf(p, side, xy) {
@@ -367,6 +376,7 @@
 
   function focusPoint(id, side) {
     const p = BY[id]; if (!p) return;
+    if (mode3d) leave3D();
     side = p.central ? "c" : side || "r";
     $("#finder").hidden = true; $("#findBtn").setAttribute("aria-expanded", "false");
     const go = () => {
@@ -710,12 +720,184 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    if (!$("#exModal").hidden) closeExercise();
+    if (!$("#sportModal").hidden) closeSport();
+    else if (!$("#exModal").hidden) closeExercise();
     else if (!$("#finder").hidden) $("#finder").hidden = true;
     else if (state.focus) closeFocus();
   });
   window.addEventListener("resize", () => { if (state.focus && svg) setVB(focusBox(BY[state.focus.id], state.focus.side)); });
 
+  /* =================== 6. SPORT: MUSCOLI IN AZIONE =================== */
+  const SP = Sport.SPORTS.corsa;
+  let bgRunners = [], sportView = null, sportLast = null, sportPhase = 0, sportMus = null;
+  let sportCam = "gamba", sportMode = "step";
+
+  // corridori che attraversano il fondo della schermata iniziale, comparendo e scomparendo
+  function startSportBg() {
+    const bg = $("#sportBg");
+    if (!bg || bgRunners.length) return;
+    const lanes = [
+      { s: 1, dur: 14, delay: -2, op: .5, sp: 1, sex: "m" },
+      { s: .7, dur: 19, delay: -9, op: .28, sp: .92, sex: "f" },
+      { s: .85, dur: 16.5, delay: -14, op: .38, sp: 1.06, sex: "m" },
+    ];
+    bg.innerHTML = lanes.map((l) => `<button class="sport-lane" type="button" style="--s:${l.s};--dur:${l.dur}s;--delay:${l.delay}s;--op:${l.op}" aria-label="Guarda i muscoli nella corsa"><span class="sport-fig"></span></button>`).join("");
+    $$(".sport-fig", bg).forEach((el, i) => bgRunners.push(Sport.runner(el, lanes[i].sex, { offset: i * 260, speed: lanes[i].sp })));
+    $$(".sport-lane", bg).forEach((b) => b.addEventListener("click", openSport));
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) bgRunners.forEach((r) => r.pause());
+  }
+  function stopSportBg() { bgRunners.forEach((r) => r.destroy()); bgRunners = []; $("#sportBg").innerHTML = ""; }
+
+  function openSport() {
+    sportLast = document.activeElement;
+    $("#sportModal").hidden = false;
+    bgRunners.forEach((r) => r.pause());
+    $("#sportLegend").innerHTML = Object.values(Sport.STATI).map((s) => `<span><i style="background:${s.color}"></i>${s.t}</span>`).join("");
+    $("#sportPhases").innerHTML = SP.phases.map((p, i) => `<button data-ph="${i}" title="${esc(p.name)}" aria-label="Fase ${i + 1}: ${esc(p.name)}">${i + 1}</button>`).join("");
+    $$("#sportPhases button").forEach((b) => b.addEventListener("click", () => { sportView.goPhase(+b.dataset.ph); syncSportPlay(); }));
+    sportMus = null;
+    sportView = Sport.viewer($("#sportAnim"), state.sex || "m", { camera: sportCam, mode: sportMode, onPhase: (i) => { sportPhase = i; renderSportInfo(); } });
+    $$(".sport-cam button").forEach((b) => b.classList.toggle("on", b.dataset.cam === sportCam));
+    $$("[data-smode]").forEach((b) => b.classList.toggle("on", b.dataset.smode === sportMode));
+    syncSportPlay();
+    $("#sportClose").focus();
+  }
+  function closeSport() {
+    if (sportView) { sportView.destroy(); sportView = null; }
+    $("#sportModal").hidden = true;
+    bgRunners.forEach((r) => r.play());
+    sportLast && sportLast.focus && sportLast.focus();
+  }
+  function syncSportPlay() {
+    const on = sportView && sportView.isPlaying();
+    $("#sportPlay").textContent = on ? "❚❚" : "▶";
+    $("#sportPlay").setAttribute("aria-label", on ? "Pausa" : "Riproduci");
+  }
+  function renderSportInfo() {
+    const ph = SP.phases[sportPhase];
+    $$("#sportPhases button").forEach((b) => b.classList.toggle("on", +b.dataset.ph === sportPhase));
+    const order = { c: 0, e: 1, s: 2 };
+    const mus = Object.entries(ph.mus).sort((a, b) => order[a[1]] - order[b[1]]);
+    const sel = sportMus && Sport.MUSCOLI[sportMus];
+    const selState = sportMus && ph.mus[sportMus];
+    $("#sportInfo").innerHTML = `
+      <span class="tag"><i></i>Muscoli in azione · ${esc(SP.name)} · fase ${sportPhase + 1} di ${SP.phases.length}</span>
+      <h3 id="sportTitle">${esc(ph.name)}</h3>
+      <p class="sport-desc">${esc(ph.desc)}</p>
+      <div class="mus-list">${mus.map(([m, s]) => { const M = Sport.MUSCOLI[m], S = Sport.STATI[s];
+        return `<button class="mus-card${sportMus === m ? " on" : ""}" data-m="${m}" style="--mc:${S.color}"><span class="mus-state"><i></i>${esc(S.t)}</span><b>${esc(M.name)}</b><small>${esc(S.d)}</small></button>`; }).join("")}</div>
+      ${sel ? `<div class="mus-detail" style="--mc:${selState ? Sport.STATI[selState].color : "var(--line-2)"}">
+        <h4>${esc(sel.name)}</h4>
+        <p><b>Nella corsa:</b> ${esc(sel.role)}</p>
+        <p><b>Cosa rischia:</b> ${esc(sel.risk)}</p>
+        <button class="btn btn--small btn--primary" id="sportToPoint" type="button">Apri nell'atlante →</button>
+      </div>` : `<p class="sport-hint">Tocca un muscolo per sapere cosa fa nella corsa e cosa rischia.</p>`}
+      <p class="sport-intro">${esc(SP.intro)}</p>`;
+    $$("#sportInfo .mus-card").forEach((b) => b.addEventListener("click", () => {
+      sportMus = sportMus === b.dataset.m ? null : b.dataset.m;
+      if (sportMus && sportView.isPlaying()) { sportView.toggle(); syncSportPlay(); } // ferma per leggere
+      renderSportInfo();
+    }));
+    const go = $("#sportToPoint");
+    if (go) go.addEventListener("click", () => {
+      const id = Sport.MUSCOLI[sportMus].point;
+      closeSport();
+      if (appEl.hidden) { if (!state.sex) state.sex = "m"; startApp(); setTimeout(() => focusPoint(id, "r"), 300); }
+      else focusPoint(id, "r");
+    });
+  }
+  $("#sportCta").addEventListener("click", openSport);
+  $("#sportBtn").addEventListener("click", openSport);
+  $("#sportClose").addEventListener("click", closeSport);
+  $("#sportModal").addEventListener("click", (e) => { if (e.target.id === "sportModal") closeSport(); });
+  $("#sportPlay").addEventListener("click", () => { sportView.toggle(); syncSportPlay(); });
+  $$(".sport-cam button").forEach((b) => b.addEventListener("click", () => {
+    sportCam = b.dataset.cam; sportView.setCamera(sportCam);
+    $$(".sport-cam button").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  $$("[data-smode]").forEach((b) => b.addEventListener("click", () => {
+    sportMode = b.dataset.smode; sportView.setMode(sportMode); syncSportPlay();
+    $$("[data-smode]").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+
+  /* =================== 7. CORPO IN 3D =================== */
+  let mode3d = false, v3d = null, hero3d = null;
+  const with3D = (fn) => { if (window.Viewer3D) fn(); else window.addEventListener("viewer3d-ready", fn, { once: true }); };
+  const fail3D = (box) => { box.innerHTML = `<p class="v3d-loading">Il 3D non è disponibile su questo dispositivo o senza connessione. Usa le viste Fronte e Retro.</p>`; };
+
+  function startHero3D() {
+    if (hero3d || setupEl.hidden) return;
+    with3D(() => {
+      if (hero3d || setupEl.hidden) return;
+      const box = $("#hero3dStage");
+      hero3d = Viewer3D.create(box, { mode: "hero", onReady: () => box.classList.add("ready"), onError: () => fail3D(box) });
+    });
+  }
+  function stopHero3D() { if (hero3d) { hero3d.destroy(); hero3d = null; } }
+
+  // first = arrivo dalla schermata iniziale: la pelle si vede piena e poi diventa trasparente
+  function enter3D(first) {
+    if (mode3d) return;
+    mode3d = true;
+    if (state.focus) closeFocus(true);
+    $("#finder").hidden = true;
+    $("#stage").classList.add("is3d");
+    $("#v3dHolder").hidden = false; $("#v3dCredit").hidden = false; $("#v3dCard").hidden = true;
+    syncViewBtns(); hideHint();
+    with3D(() => {
+      if (!mode3d || v3d) return;
+      const box = $("#v3dHolder");
+      v3d = Viewer3D.create(box, {
+        layer: state.layer, start: first ? "pelle" : "strati",
+        onReady: () => {
+          box.classList.add("ready"); sync3DLayer();
+          // all'ingresso si vede la pelle, poi si apre sullo strato scelto
+          setTimeout(() => v3d && v3d.reveal(true), first ? 1600 : 0);
+        },
+        onMuscles: () => sync3DLayer(),
+        onError: () => fail3D(box),
+        onPick: show3DCard,
+      });
+      if (first) v3d.reveal(false);
+    });
+    sync3DLayer();
+  }
+  function leave3D() {
+    if (!mode3d) return;
+    mode3d = false;
+    if (v3d) { v3d.destroy(); v3d = null; }
+    $("#v3dHolder").classList.remove("ready"); $("#v3dHolder").innerHTML = `<p class="v3d-loading">Carico il corpo in 3D…</p>`;
+    $("#v3dHolder").hidden = true; $("#v3dNote").hidden = true; $("#v3dCard").hidden = true; $("#v3dCredit").hidden = true;
+    $("#stage").classList.remove("is3d");
+    syncViewBtns();
+  }
+  function sync3DLayer() {
+    if (v3d) v3d.setLayer(state.layer);
+    const note = $("#v3dNote");
+    const msg = state.layer === "ossa" ? "" : state.layer === "muscoli"
+      ? (v3d && !v3d.hasMuscles() ? "Carico i muscoli in 3D…" : "")
+      : `Lo strato «${LAY[state.layer].label}» per ora c'è nelle viste Fronte e Retro. In 3D vedi lo scheletro dentro il corpo.`;
+    note.hidden = !msg; note.textContent = msg;
+    if (v3d && state.layer !== "ossa" && state.layer !== "muscoli") v3d.setLayer("ossa");
+  }
+  function show3DCard(info) {
+    const card = $("#v3dCard");
+    if (!info) { card.hidden = true; return; }
+    const p = info.point && BY[info.point];
+    const lato = info.side === "l" ? "lato sinistro" : info.side === "r" ? "lato destro" : "";
+    // lato della persona -> lato dello schermo nella vista 2D del punto
+    const screen = p && !p.central ? (info.side === "l" ? (p.view === "f" ? "r" : "l") : (p.view === "f" ? "l" : "r")) : "r";
+    card.innerHTML = `<button class="icon-btn v3d-card__x" aria-label="Chiudi">×</button>
+      <span class="tag"><i></i>${info.kind === "muscoli" ? "Muscoli" : "Ossa e articolazioni"}${lato ? " · " + lato : ""}</span>
+      <h4>${esc(info.it)}</h4><small>${esc(info.en)}</small>
+      ${p ? `<p>Legato a: <b>${esc(p.name)}</b> · ${esc(p.sub)}</p><button class="btn btn--small btn--primary" type="button" data-go>Apri il consulto →</button>` : `<p>Per questa struttura non c'è ancora un consulto guidato.</p>`}`;
+    card.hidden = false;
+    $(".v3d-card__x", card).addEventListener("click", () => { card.hidden = true; v3d && v3d.clear(); });
+    const go = $("[data-go]", card);
+    if (go) go.addEventListener("click", () => focusPoint(p.id, screen));
+  }
+
   // apertura diretta da link condiviso (es. #punto=achille&lato=r) se il profilo è già salvato
   if (saved && location.hash.includes("punto=")) startApp();
+  if (!setupEl.hidden) { startSportBg(); startHero3D(); }
 })();
